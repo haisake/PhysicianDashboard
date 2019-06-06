@@ -23,7 +23,7 @@ WITH AllDays AS
   WHERE [Date] < @end_date 
 )
 
-SELECT [Date] INTO #dates FROM AllDays OPTION (MAXRECURSION 600);
+SELECT [Date] INTO #dates FROM AllDays OPTION (MAXRECURSION 600); /*query fails if the date range has more than 599 dates*/
 
 /*find the census for each provider on the dates*/
 SELECT @CensusHour as 'CensusHour'
@@ -53,3 +53,4 @@ END
 , [lu_SpecialtyID]
 , [lu_WardID]
 
+DROP TABLE #dates;	/*remove temp tables*/
