@@ -23,6 +23,8 @@ WITH AllDays AS
   WHERE [Date] < @end_date 
 )
 
+SELECT [Date] INTO #dates FROM AllDays OPTION (MAXRECURSION 600);
+
 /*find the census for each provider on the dates*/
 SELECT @CensusHour as 'CensusHour'
 , case when [lu_SpecialtyID]='ALC' then 'ALC' 
@@ -40,7 +42,7 @@ END as ALCFlag
 , isnull([lu_BedID],'UNKNOWN') as 'Bed'
 */
 FROM [CapPlan_RHS].[dbo].[Assignments] as X
-INNER JOIN AllDays as Y
+INNER JOIN #dates as Y
 ON Y.[Date] BETWEEN AssignmentDate AND ISNULL(AssignmentEndDate,'2050-01-01')	--filter to days relevant between @start and @end and assign a date for computing census
 where X.lu_wardid not like 'm[0-9]%'	/*ignore minoru*/
 and X.lu_wardid not in ('rhbcb','ramb') /*ignore birth center and ambulatory care*/
@@ -50,3 +52,4 @@ END
 , [lu_HealthCareProfessionalID]
 , [lu_SpecialtyID]
 , [lu_WardID]
+
