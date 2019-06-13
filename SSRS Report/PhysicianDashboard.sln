@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F14B399A-7131-4C87-9E4B-1186C45EF12D}") = "RegionalHomeHealthDashboard", "RegionalTrueNorthScorecard.rptproj", "{D4548E7F-B252-4A85-A2BB-551BF04D99A5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Default = Debug|Default
+		DebugLocal|Default = DebugLocal|Default
+		Release|Default = Release|Default
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D4548E7F-B252-4A85-A2BB-551BF04D99A5}.Debug|Default.ActiveCfg = Debug
+		{D4548E7F-B252-4A85-A2BB-551BF04D99A5}.Debug|Default.Build.0 = Debug
+		{D4548E7F-B252-4A85-A2BB-551BF04D99A5}.Debug|Default.Deploy.0 = Debug
+		{D4548E7F-B252-4A85-A2BB-551BF04D99A5}.DebugLocal|Default.ActiveCfg = DebugLocal
+		{D4548E7F-B252-4A85-A2BB-551BF04D99A5}.DebugLocal|Default.Build.0 = DebugLocal
+		{D4548E7F-B252-4A85-A2BB-551BF04D99A5}.DebugLocal|Default.Deploy.0 = DebugLocal
+		{D4548E7F-B252-4A85-A2BB-551BF04D99A5}.Release|Default.ActiveCfg = Release
+		{D4548E7F-B252-4A85-A2BB-551BF04D99A5}.Release|Default.Build.0 = Release
+		{D4548E7F-B252-4A85-A2BB-551BF04D99A5}.Release|Default.Deploy.0 = Release
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
