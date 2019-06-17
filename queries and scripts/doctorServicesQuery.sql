@@ -2,8 +2,8 @@
 Purpose: To pull in doctor codes and doctor services identified as the following
 - Hospitalist
 - Internal Medicine
-- ACE – Hospitalist
-- ACE – GIM
+- ACE â€“ Hospitalist
+- ACE â€“ GIM
 These groupings must be mutulay exclusive.
 Hospitalist are maintained in DSSI.dbo.
  

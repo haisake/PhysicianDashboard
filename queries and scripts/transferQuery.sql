@@ -1,18 +1,18 @@
-﻿/*
+/*
 Purpose: To build the indicator table for the physician dashboard
 Author: Hans Aisake
 Date Created: June 14, 2019
 Date Modified:
 Comments:
 
--- transfers between physicians
---encounterId in (615375, 969797, 287650) are good example cases with many handoffs
---Question: What is the difference between a transfer and hand-off? same service?
+ transfers between physicians
+ encounterId in (615375, 969797, 287650) are good example cases with many handoffs
+ What is the difference between a transfer and hand-off same service
 
 */
 
 
- /* find the subset of the CapPlan assignments needed */
+/* find the subset of the CapPlan assignments needed */
 WITH applicableEncounters AS (
 	SELECT X.AssignmentID, X.EncounterID, X.AssignmentDate, X.AssignmentEndDate, X.lu_EncounterID, X.lu_HealthCareProfessionalID
 	FROM [CapPlan_RHS].[dbo].[Assignments] as X

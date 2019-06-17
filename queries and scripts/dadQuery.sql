@@ -1,4 +1,4 @@
-﻿/*
+/*
 Purpose: To build the indicator table for the physician dashboard
 Author: Hans Aisake
 Date Created: June 14, 2019

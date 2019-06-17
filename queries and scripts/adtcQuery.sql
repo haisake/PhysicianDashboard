@@ -1,4 +1,4 @@
-﻿/*
+/*
 Purpose: Pull data from ADTCMart so that we can identify discharges and identify time after discharge till a readmission.
 Want to compute volumes by day of week and time of day for discharges by physician services.
 Want to compute readmission rates by 7 and 28 days.
