@@ -48,7 +48,7 @@ List of Indicators
 	;
 
 -----------------------------------
--- service table
+-- service table; dim.DrService
 -----------------------------------
  IF OBJECT_ID('tempdb.dbo.#drService') is not NULL DROP TABLE #drService;
  GO
@@ -96,7 +96,7 @@ ON serv.ServiceID = doc.DrServiceID
 GO
 
 -------------------------------------------
--- Pull DAD data
+-- Pull DAD data; dbo.DAD
 -------------------------------------------
 IF OBJECT_ID('tempdb.dbo.#DAD') is not null DROP TABLE #DAD;
 GO
@@ -125,7 +125,7 @@ GROUP BY  D.FiscalPeriodLong
 GO
 
 -------------------------------------------
--- Pull ED data; can't get consulting physician
+-- Pull ED data; can't get consulting physician ; dbo.ED
 -------------------------------------------
 IF OBJECT_ID('tempdb.dbo.#ED') is not NULL DROP TABLE #ED;
 GO
@@ -153,7 +153,7 @@ WHERE ED.FacilityShortName='RHS'
 ;
 
 -------------------------------------------
--- ADTC 1
+-- discharges and readmissions; dbo.ADTC1
 -------------------------------------------
 IF OBJECT_ID('tempdb.dbo.#temp') is not null DROP TABLE #temp;
 GO
@@ -191,9 +191,22 @@ FROM (
 WHERE rn=1
 ;
 
+-------------------------------------------
+-- service transfers; dbo.ADTC2
+-------------------------------------------
+IF OBJECT_ID('tempdb.dbo.#temp') is not null DROP TABLE #temp;
+GO
+
+SELECT TOP 10 *
+FROM ADTCMart.adtc.vwTransferFact as T
+INNER JOIN #physDB_reportFP as D
+ON T.TransferDate BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate
+WHERE site='rmd'
+AND AdjustedDischargeDate is not NULL
+;
 
 -------------------------------------------
--- CapPlan Census
+-- CapPlan Census; dbo.CP
 -------------------------------------------
 
 /*
