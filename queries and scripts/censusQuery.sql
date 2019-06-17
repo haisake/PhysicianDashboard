@@ -6,7 +6,6 @@ Date Modified:
 Comments:
 	The base idea came from Peter's query. I removed the classification as Hospitalist, GIM, etc... from this query.
 	Those linkages have to be found elsewhere in other databses like DSSI if anywhere at all.
-	Hard coding a mapping into this query was not desired, but we will have sufficient foundations to do it later
  */
 
 /*Parameters for the query*/

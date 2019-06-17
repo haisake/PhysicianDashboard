@@ -32,7 +32,7 @@ List of Indicators
 	GO
 
 	WITH TEMP AS (
-		SELECT distinct TOP 36  fiscalyear, fiscalperiodlong, fiscalperiodstartdate, fiscalperiodenddate
+		SELECT distinct TOP 39  fiscalyear, fiscalperiodlong, fiscalperiodstartdate, fiscalperiodenddate
 	
 		FROM ADTCMart.dim.[Date]
 		WHERE FiscalPeriodEndDate < DATEADD(day, -1, GETDATE())	--FP over for at least a year
@@ -192,18 +192,57 @@ WHERE rn=1
 ;
 
 -------------------------------------------
--- service transfers; dbo.ADTC2
+-- transfers between physicians; dbo.CP2
 -------------------------------------------
-IF OBJECT_ID('tempdb.dbo.#temp') is not null DROP TABLE #temp;
+--encounterId in (615375, 969797, 287650) are good example cases with many handoffs
+--Question: What is the difference between a transfer and hand-off? same service?
+
+--find the subset of the CapPlan assignments needed
+IF OBJECT_ID('tempdb.dbo.#applicableEncounters') IS NOT NULL DROP TABLE #applicableEncounters;
 GO
 
-SELECT TOP 10 *
-FROM ADTCMart.adtc.vwTransferFact as T
-INNER JOIN #physDB_reportFP as D
-ON T.TransferDate BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate
-WHERE site='rmd'
-AND AdjustedDischargeDate is not NULL
+SELECT X.AssignmentID, X.EncounterID, X.AssignmentDate, X.AssignmentEndDate, X.lu_EncounterID, X.lu_HealthCareProfessionalID
+INTO #applicableEncounters
+FROM [CapPlan_RHS].[dbo].[Assignments] as X
+INNER JOIN --only keep records with at least 2 distinct physicians otherwise there can't be any transfers of interest
+(	SELECT encounterID, COUNT(distinct [lu_HealthCareProfessionalID]) as 'NumProviders'
+	FROM [CapPlan_RHS].[dbo].[Assignments]
+	GROUP BY EncounterID
+	HAVING COUNT(distinct [lu_HealthCareProfessionalID]) >=2	--need at least 2 different providers in the encounter
+) as Y
+ON X.EncounterId=Y.EncounterID	--same encounterID
+WHERE AssignmentEndDate >= DATEADD(month, -1, DATEADD(year,-3,GETDATE()))		--valid history range
+OR AssignmentDate >= DATEADD(month, -1, DATEADD(year,-3,GETDATE()))				--valid history range
 ;
+GO
+
+--assign an ordered row number to the eligable records based on assignment startdate
+IF OBJECT_ID('tempdb.dbo.#rowNum') is not null DROP TABLE #rowNum;
+GO
+
+SELECT ROW_NUMBER() OVER(Partition by EncounterID ORDER BY AssignmentDate ASC) as 'rn'
+, *
+INTO #rowNum
+FROM #applicableEncounters
+;
+
+--identify transfer data set
+IF OBJECT_ID('tempdb.dbo.#transfers') is not null DROP TABLE #transfers;
+GO
+
+SELECT X.EncounterID
+, DATEPART(day, X.AssignmentDate) as 'TransferDate'
+, DATEPART(hour, X.AssignmentDate) as 'TransferHour'
+,  X.lu_HealthCareProfessionalID as 'OrigPhys'
+, Y.lu_HealthCareProfessionalID as 'TransPhys'
+INTO #transfers
+FROM #rowNum as X
+INNER JOIN #rowNum as Y
+ON X.rn=(Y.rn-1) 
+AND X.EncounterID=Y.EncounterID
+AND X.lu_HealthCareProfessionalID!=Y.lu_HealthCareProfessionalID
+;
+GO
 
 -------------------------------------------
 -- CapPlan Census; dbo.CP
