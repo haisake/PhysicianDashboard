@@ -52,7 +52,7 @@ loadFromCapPlan <-function(queryFileName)
                         Server = "SPDBSCAP001",
                         Database ="CapPlan_rhs",
                         UID = "CapPlanHC_Reader",
-                        PWD    = rstudioapi::askForPassword("Database password")
+                        PWD    = rstudioapi::askForPassword("Database password (case sensitive):")
   )
   # replace this line if you want to ask for the User ID to be entered as well.
   # UID    = rstudioapi::askForPassword("Database user"),
@@ -68,7 +68,7 @@ loadFromCapPlan <-function(queryFileName)
 loadFromDSDW <-function(queryFileName)
 {
   con <- DBI::dbConnect(odbc::odbc(),
-                        dsn = rstudioapi::askForPassword("Database connection name:")
+                        dsn = rstudioapi::askForPassword("Database connection name (case sensitive):")
   )
   # replace this line if you want to ask for the User ID to be entered as well.
   # UID    = rstudioapi::askForPassword("Database user"),
@@ -88,6 +88,10 @@ testData <- loadFromCapPlan(queryFileName)
 queryFileName <- "adtcQuery.sql"
 testData <- loadFromDSDW(queryFileName)
 
+queryFileName <- "reportDateQuery.sql"
+testData <- loadFromDSDW(queryFileName)
 
+queryFileName <- "edQuery.sql"
+testData <- loadFromDSDW(queryFileName)
 
 
