@@ -12,30 +12,64 @@ rm(list=ls())
 #set library and working directories
 libPath <-"H:/Hans/R Libraries"
 .libPaths(libPath) #set the library path
-wd <- "//vch.ca/departments/VCHDecisionSupport/Patient Flow/Richmond SSRS Reports/PhysicianDashboard/PhysicianDashboard/src"
+wd <- "//vch.ca/departments/VCHDecisionSupport/Patient Flow/Richmond SSRS Reports/PhysicianDashboard/PhysicianDashboard/queries and scripts"
 setwd(wd)
 
 #load libraries
-library(RODBC)
+library(DBI)
+library(odbc)
+
+queryFileName <- "testQueryCP.sql"
+queryFileName <- "transferQuery.sql"
 
 #get query from a .sql file
-getQuery <-function(fileName){
-  rawQueryTxt <-readChar(fileName, file.info(fileName)$size)
-  finalQueryTxt <-gsub( "[\r\n\t]", " ", rawQueryTxt) #remove spaces, newlines, and tabs
+getSQL <- function(filepath){
+  con = file(filepath, "r")
+  sql.string <- ""
+  
+  while (TRUE){
+    line <- readLines(con, n = 1, encoding="UTF-8")
+    
+    if ( length(line) == 0 ){
+      break
+    }
+    
+    line <- gsub("\\t", " ", line)
+    
+    if(grepl("--",line) == TRUE){
+      line <- paste(sub("--","/*",line),"*/")
+    }
+    
+    sql.string <- paste(sql.string, line)
+  }
+  
+  close(con)
+  return(sql.string)
 }
 
-#Purpose: load other data sets given a ODBC connection anme and queryfile name
-loadCensus <-function(connectionName, queryFileName)
+#Purpose: load data from CapPlan for a specified query
+loadFromCapPlan <-function(queryFileName)
 {
-  uid <- readline("User id: ")
-  pwd <- readline("Password: ")
-  channel <- odbcConnect(connectionName, uid, pwd)  #set the connection details
-  query <- getQuery(queryFileName)        #get the query string from the external query file
-  x <-sqlQuery(channel, query)          #query the database and bring the data in as a table
+  con <- DBI::dbConnect(odbc::odbc(),
+                        Driver = "SQL Server",
+                        Server = "SPDBSCAP001",
+                        Database ="CapPlan_rhs",
+                        UID = "CapPlanHC_Reader",
+                        PWD    = rstudioapi::askForPassword("Database password")
+  )
+  # replace this line if you want to ask for the User ID to be entered as well.
+  # UID    = rstudioapi::askForPassword("Database user"),
   
-  odbcCloseAll() #close data base connection
+  query <- getSQL(queryFileName)        #get the query string from the external query file
+  x <- dbGetQuery(con, query)  
+
+  dbDisconnect(con) #close data base connection
   return(x) #return the results
 }
+
+
+testData <- loadFromCapPlan(queryFileName)
+
 
 #censusQuery
 censusData          <- loadDataGeneric("CAPPLAN","censuQuery.sql")
