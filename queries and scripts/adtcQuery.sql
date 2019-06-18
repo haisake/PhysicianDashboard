@@ -10,9 +10,8 @@ Comments:
 	/* build a table of fiscal period dates */
 	WITH TEMP AS (
 		SELECT distinct TOP 39  fiscalyear, fiscalperiodlong, fiscalperiodstartdate, fiscalperiodenddate
-	
 		FROM ADTCMart.dim.[Date]
-		WHERE FiscalPeriodEndDate < DATEADD(day, -1, GETDATE())	--FP over for at least a year
+		WHERE FiscalPeriodEndDate < DATEADD(day, -1, GETDATE())	/* FP over for at least a year */
 		ORDER BY fiscalperiodlong desc
 	)
 
@@ -23,6 +22,7 @@ Comments:
 		LEFT JOIN (SELECT fiscalyear, min(fiscalperiodstartdate) as 'FiscalYearStartDate', max(fiscalperiodenddate) as 'FiscalYearEndDate' FROM TEMP GROUP BY fiscalyear) as Y
 		ON X.FiscalYear=Y.FiscalYear
 	)
+
 
 	/* pull discharges from ADTC mart */
 	, Discharges As (
@@ -43,11 +43,15 @@ Comments:
 	/* add readmission times to the discharge time */
 	SELECT *
 	FROM (
-		SELECT ROW_NUMBER() OVER(PARTITION BY X.PatientID ORDER BY Y.AdjustedAdmissionDate ASC) as 'rn'
+		SELECT ROW_NUMBER() OVER(PARTITION BY X.PatientID, X.AdjustedDischargeDate ORDER BY Y.AdjustedAdmissionDate ASC) 'rn'
 		, X.*
 		, DATEDIFF(day, X.AdjustedDischargeDate, Y.AdjustedAdmissionDate) as 'Readmission_any_days'
+		, Y.AdjustedAdmissionDate as 'ReadmissionDate'
 		FROM Discharges as X
 		LEFT JOIN Discharges as Y
 		ON X.AdjustedDischargeDate < Y.AdjustedAdmissionDate
+		AND X.PatientId=Y.PatientId
 	) Z
 	WHERE rn=1
+
+
