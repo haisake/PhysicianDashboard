@@ -4,7 +4,6 @@
 # Date Modified: May 16, 2019
 # Comments:
 
-
 # Initialization ####
 #clear workspace
 rm(list=ls())
@@ -19,11 +18,9 @@ setwd(wd)
 library(DBI)
 library(odbc)
 
-queryFileName <- "testQueryCP.sql"
-queryFileName <- "transferQuery.sql"
-
 #get query from a .sql file
-getSQL <- function(filepath){
+getSQL <- function(filepath)
+{
   con = file(filepath, "r")
   sql.string <- ""
   
@@ -62,16 +59,35 @@ loadFromCapPlan <-function(queryFileName)
   
   query <- getSQL(queryFileName)        #get the query string from the external query file
   x <- dbGetQuery(con, query)  
-
+  
   dbDisconnect(con) #close data base connection
   return(x) #return the results
 }
 
+#Purpose: load data from CapPlan for a specified query
+loadFromDSDW <-function(queryFileName)
+{
+  con <- DBI::dbConnect(odbc::odbc(),
+                        dsn = rstudioapi::askForPassword("Database connection name:")
+  )
+  # replace this line if you want to ask for the User ID to be entered as well.
+  # UID    = rstudioapi::askForPassword("Database user"),
+  
+  query <- getSQL(queryFileName)        #get the query string from the external query file
+  x <- dbGetQuery(con, query)  
+  
+  dbDisconnect(con) #close data base connection
+  return(x) #return the results
+}
 
+#test cases for cap plan
+queryFileName <- "transferQuery.sql"
 testData <- loadFromCapPlan(queryFileName)
 
+#test cases for DSDW
+queryFileName <- "adtcQuery.sql"
+testData <- loadFromDSDW(queryFileName)
 
-#censusQuery
-censusData          <- loadDataGeneric("CAPPLAN","censuQuery.sql")
-doctorServicesTable <- loadDataGeneric("AISAKE-DSSI","doctorServicesQuery.sql")
+
+
 
