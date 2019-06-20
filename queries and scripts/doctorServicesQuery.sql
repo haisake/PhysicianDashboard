@@ -26,7 +26,7 @@ Comments:
 	 AND AttendDoctorName not in ('Invalid')
 	 GROUP BY AttendDoctorName
 	 , AttendDoctorCode
- )
+)
 
 SELECT AttendDoctorName as 'DrName'
 , 'P' + AttendDoctorCode as 'DrCode'
@@ -53,7 +53,8 @@ ON doc.drname = HospitalistName	/*name is the same*/
 AND hosp.FacilityLongName='richmond hospital'	/*richmond only*/
 LEFT JOIN ADTCMart.dim.[Service] as serv
 ON serv.ServiceID = doc.DrServiceID
-/* DoctorService in ('Internal Medicine','Hospitalist') */
+
+
 
 
 						 

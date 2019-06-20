@@ -45,7 +45,7 @@ Comments:
 	FROM (
 		SELECT ROW_NUMBER() OVER(PARTITION BY X.PatientID, X.AdjustedDischargeDate ORDER BY Y.AdjustedAdmissionDate ASC) 'rn'
 		, X.*
-		, DATEDIFF(day, X.AdjustedDischargeDate, Y.AdjustedAdmissionDate) as 'Readmission_any_days'
+		, ISNULL(DATEDIFF(day, X.AdjustedDischargeDate, Y.AdjustedAdmissionDate),9999) as 'Readmission_any_days'
 		, Y.AdjustedAdmissionDate as 'ReadmissionDate'
 		FROM Discharges as X
 		LEFT JOIN Discharges as Y
