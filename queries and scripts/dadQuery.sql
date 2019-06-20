@@ -30,7 +30,7 @@ Comments:
 	*/
 	SELECT D.FiscalPeriodLong
 	, D.FiscalYear
-	, ADR.MostRespProviderCode
+	, 'P'+ADR.MostRespProviderCode as 'MostRespProviderCode'
 	, CMGPlusCode +'-' + LEFT(CMGPlusDesc,40) as 'CMG'
 	, SUM([ELOS]) as 'Sum_ELOS'
 	, SUM([LOS]) as 'Sum_LOS'
