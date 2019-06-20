@@ -15,10 +15,18 @@ wd <- "//vch.ca/departments/VCHDecisionSupport/Patient Flow/Richmond SSRS Report
 setwd(wd)
 
 #load libraries
-library(DBI)
-library(odbc)
+library(DBI) #for database connections
+library(odbc) #for database connections
+library(dplyr) #for data manipulation
+
+#DSDW DSN
+dsdw_dsn <- "AISAKE-DSSI"
+#capplan details are more hardcoded
+
+# Data loading functions ####
 
 #get query from a .sql file
+#requires saving as UTF-8 without signature.
 getSQL <- function(filepath)
 {
   con = file(filepath, "r")
@@ -65,10 +73,10 @@ loadFromCapPlan <-function(queryFileName)
 }
 
 #Purpose: load data from CapPlan for a specified query
-loadFromDSDW <-function(queryFileName)
+loadFromDSDW <-function(queryFileName, dsdw_dsn)
 {
   con <- DBI::dbConnect(odbc::odbc(),
-                        dsn = rstudioapi::askForPassword("Database connection name (case sensitive):")
+                        dsn = dsdw_dsn
   )
   # replace this line if you want to ask for the User ID to be entered as well.
   # UID    = rstudioapi::askForPassword("Database user"),
@@ -79,19 +87,69 @@ loadFromDSDW <-function(queryFileName)
   dbDisconnect(con) #close data base connection
   return(x) #return the results
 }
+#####
 
-#test cases for cap plan
-queryFileName <- "transferQuery.sql"
-testData <- loadFromCapPlan(queryFileName)
+# Pull in data from the different environments ####
+  #test cases for cap plan
+  queryFileName <- "transferQuery.sql"
+  transfers_df <- loadFromCapPlan(queryFileName)
+  
+  queryFileName <- "censusQuery.sql"
+  census_df <- loadFromCapPlan(queryFileName)
+  
+  #test cases for DSDW
+  queryFileName <- "adtcQuery.sql"
+  adtc_df <- loadFromDSDW(queryFileName,dsdw_dsn)
+  
+  queryFileName <- "reportDateQuery.sql"
+  repDate_df <- loadFromDSDW(queryFileName,dsdw_dsn)
+  
+  queryFileName <- "edQuery.sql"
+  ed_df <- loadFromDSDW(queryFileName,dsdw_dsn)
+  
+  queryFileName <- "dadQuery.sql"
+  testData <- loadFromDSDW(queryFileName,dsdw_dsn)
+  
+  queryFileName <- "doctorServicesQuery.sql"
+  service_df <- loadFromDSDW(queryFileName,dsdw_dsn)
+#####
 
-#test cases for DSDW
-queryFileName <- "adtcQuery.sql"
-testData <- loadFromDSDW(queryFileName)
+names(adtc_df)
+names(census_df)
+names(ed_df)
+names(repDate_df)
+names(service_df)
+names(transfers_df)
+  
 
-queryFileName <- "reportDateQuery.sql"
-testData <- loadFromDSDW(queryFileName)
+#add doctor service categories to data sets and filter to the target services <changed description> ####
+  target_services <- c( "Internal Medicine", "Hospitalist" )
+  
+  census_df <-census_df %>% 
+    semi_join(service_df, by="DrCode" )  %>%
+    semi_join(repDate_df, by = c("Date" = "ShortDate") ) %>%
+    filter(DoctorService %in% target_services )
+  
+  transfers_df <-transfers_df %>%
+    semi_join(service_df, by = c("OrigPhys" = "DrCode") ) %>%
+    semi_join(service_df, by = c("TransPhys" = "DrCode") ) %>%
+    semi_join(repDate_df, by = c("TransferDate" = "ShortDate") ) %>%
+    filter(DoctorService.x %in% target_services | DoctorService.y %in% target_services ) %>%
 
-queryFileName <- "edQuery.sql"
-testData <- loadFromDSDW(queryFileName)
+  adtc_df <- adtc_df %>% 
+    semi_join(service_df, by=c("DischargeAttendingDrcode" = "DrCode" ) )  %>%
+    semi_join(repDate_df, by = c("Date" = "ShortDate") ) %>%
+    filter( DoctorService %in% target_services )
+  
+  dad_df <- dad_df %>% 
+    semi_join(service_df, by="DrCode" )  %>%
+    filter( DoctorService %in% target_services )
+
+####
+
+#at this point all the relevant data sets are made and now I need to compute the indicators
+#the start and end dates aren't utilized yet and would need to be changed in the join conditions above to be used properly
+census_df <- select(census_df,-c(lu_SpecialtyID, DrName, DS_StartDate, DS_EndDate )) 
+transfers_df <- select(census_df,-c(lu_SpecialtyID, DrName, DS_StartDate, DS_EndDate )) 
 
 
