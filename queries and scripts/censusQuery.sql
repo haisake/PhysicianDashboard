@@ -13,7 +13,7 @@ Comments:
 WITH dates AS(
 	SELECT distinct CONVERT(date, [AdmissionDate]) as [date] 
 	FROM [CapPlan_RHS].[dbo].[Admissions]
-	WHERE CONVERT(date, [AdmissionDate])  BETWEEN DATEADD(year, -1, CONVERT(date, [AdmissionDate])) AND GETDATE()
+	WHERE CONVERT(date, [AdmissionDate])  BETWEEN DATEADD(year, -1, CONVERT(date, GETDATE())) AND GETDATE()
 )
 
 , dates2 AS (
