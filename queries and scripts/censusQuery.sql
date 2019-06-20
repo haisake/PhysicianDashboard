@@ -8,24 +8,21 @@ Comments:
 	Those linkages have to be found elsewhere in other databses like DSSI if anywhere at all.
  */
 
-/*Parameters for the query*/
-DECLARE @CensusHour int = 7;
-DECLARE @start_date DATETIME = DATEADD(year, -1, DATEADD(hh, @CensusHour, DATEADD(dd, DATEDIFF(dd, 0, GETDATE()), 0))); /*get the current date, set time to @CensusHour, and then reduce the year by 1*/
-DECLARE @end_date DATETIME = DATEADD(hh, @CensusHour, DATEADD(dd, DATEDIFF(dd, 0, GETDATE()), 0)); /*get the current date, set time to @CensusHour*/
 
-/*create a list of dates based on the parameters*/
-WITH AllDays AS 
-( SELECT @start_date AS [Date]
-  UNION ALL
-  SELECT DATEADD(DAY, 1, [Date])
-  FROM AllDays
-  WHERE [Date] < @end_date 
+/* we have admissions everyday so we can use the admissino table to get a list of dates without the CTE loop. This is easier for R to run. */
+WITH dates AS(
+	SELECT CONVERT(date, [AdmissionDate]) as [date] 
+	FROM [CapPlan_RHS].[dbo].[Admissions]
+	WHERE CONVERT(date, [AdmissionDate])  BETWEEN DATEADD(year, -1, CONVERT(date, [AdmissionDate])) AND GETDATE()
 )
 
-SELECT [Date] INTO #dates FROM AllDays OPTION (MAXRECURSION 600); /*query fails if the date range has more than 599 dates*/
+, dates2 AS (
+	SELECT DATEADD(hour, 7, [date]) as 'Date_withHour' /* change the 7 to the hour of the day you want */
+	FROM dates
+)
 
 /*find the census for each provider on the dates*/
-SELECT @CensusHour as 'CensusHour'
+SELECT 7 as 'CensusHour'
 , case when [lu_SpecialtyID]='ALC' then 'ALC' 
 	   else 'Acute' 
 END as ALCFlag
@@ -41,15 +38,14 @@ END as ALCFlag
 , isnull([lu_BedID],'UNKNOWN') as 'Bed'
 */
 FROM [CapPlan_RHS].[dbo].[Assignments] as X
-INNER JOIN #dates as Y
-ON Y.[Date] BETWEEN AssignmentDate AND ISNULL(AssignmentEndDate,'2050-01-01')	--filter to days relevant between @start and @end and assign a date for computing census
+INNER JOIN dates2 as Y
+ON Y.[Date_withHour] BETWEEN AssignmentDate AND ISNULL(AssignmentEndDate,'2050-01-01')	/* filter to days relevant between @start and @end and assign a date for computing census */
 where X.lu_wardid not like 'm[0-9]%'	/*ignore minoru*/
 and X.lu_wardid not in ('rhbcb','ramb') /*ignore birth center and ambulatory care*/
-GROUP BY case when [lu_SpecialtyID]='ALC' then 'ALC' 
-	   else 'Acute' 
+GROUP BY 
+case when [lu_SpecialtyID]='ALC' then 'ALC' 
+	 else 'Acute' 
 END
 , [lu_HealthCareProfessionalID]
 , [lu_SpecialtyID]
 , [lu_WardID]
-
-DROP TABLE #dates;	/*remove temp tables*/
