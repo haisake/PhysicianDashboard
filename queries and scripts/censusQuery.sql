@@ -11,7 +11,7 @@ Comments:
 
 /* we have admissions everyday so we can use the admissino table to get a list of dates without the CTE loop. This is easier for R to run. */
 WITH dates AS(
-	SELECT CONVERT(date, [AdmissionDate]) as [date] 
+	SELECT distinct CONVERT(date, [AdmissionDate]) as [date] 
 	FROM [CapPlan_RHS].[dbo].[Admissions]
 	WHERE CONVERT(date, [AdmissionDate])  BETWEEN DATEADD(year, -1, CONVERT(date, [AdmissionDate])) AND GETDATE()
 )
