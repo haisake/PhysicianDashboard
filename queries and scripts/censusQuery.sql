@@ -17,12 +17,14 @@ WITH dates AS(
 )
 
 , dates2 AS (
-	SELECT DATEADD(hour, 7, [date]) as 'Date_withHour' /* change the 7 to the hour of the day you want */
+	SELECT DATEADD(hour, 7, CONVERT(datetime, [date]) ) as 'Date_withHour' /* change the 7 to the hour of the day you want */
+	, [date]
 	FROM dates
 )
 
 /*find the census for each provider on the dates*/
-SELECT 7 as 'CensusHour'
+SELECT Y.[Date]
+, 7 as 'CensusHour'
 , case when [lu_SpecialtyID]='ALC' then 'ALC' 
 	   else 'Acute' 
 END as ALCFlag
@@ -42,8 +44,8 @@ INNER JOIN dates2 as Y
 ON Y.[Date_withHour] BETWEEN AssignmentDate AND ISNULL(AssignmentEndDate,'2050-01-01')	/* filter to days relevant between @start and @end and assign a date for computing census */
 where X.lu_wardid not like 'm[0-9]%'	/*ignore minoru*/
 and X.lu_wardid not in ('rhbcb','ramb') /*ignore birth center and ambulatory care*/
-GROUP BY 
-case when [lu_SpecialtyID]='ALC' then 'ALC' 
+GROUP BY Y.[Date]
+,case when [lu_SpecialtyID]='ALC' then 'ALC' 
 	 else 'Acute' 
 END
 , [lu_HealthCareProfessionalID]
