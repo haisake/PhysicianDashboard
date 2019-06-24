@@ -18,8 +18,12 @@ Comments:
 		GROUP BY fiscalyear
 	)
 
+
 	/* add on fiscal year dates */
-	SELECT X.*, Y.FiscalYearStartDate, Y.FiscalYearEndDate
+	SELECT X.*, Y.FiscalYearStartDate, Y.FiscalYearEndDate, D.ShortDate
 	FROM fpDates as X
 	LEFT JOIN fyDates as Y
 	ON X.FiscalYear=Y.FiscalYear
+	LEFT JOIN ADTCMart.dim.[Date] as D
+	ON D.ShortDate BETWEEN X.FiscalPeriodStartDate AND X.FiscalPeriodEndDate
+

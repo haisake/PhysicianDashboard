@@ -34,6 +34,7 @@ WITH fpDates AS (
 
 /* Pull ED visit data. */
 SELECT startdate
+, StartDateFiscalPeriodLong
 , visitID
 , AdmittedFlag
 , BedRequestDate as 'Admit_Date'

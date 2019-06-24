@@ -37,7 +37,8 @@ WITH applicableEncounters AS (
 
 /* identify transfer data set */
 SELECT X.EncounterID
-, DATEPART(day, X.AssignmentDate) as 'TransferDate'
+, X.AssignmentDate as 'TransferDate'
+, DATENAme(dw, X.AssignmentDate) as 'TransferDoW'
 , DATEPART(hour, X.AssignmentDate) as 'TransferHour'
 , X.lu_HealthCareProfessionalID as 'OrigPhys'
 , Y.lu_HealthCareProfessionalID as 'TransPhys'
