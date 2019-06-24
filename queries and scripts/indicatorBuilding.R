@@ -21,6 +21,9 @@ library(dplyr) #for data manipulation
 
 #DSDW DSN
 dsdw_dsn <- "AISAKE-DSSI"
+#targeted services data we want after joining
+target_services <- c( "Internal Medicine", "Hospitalist" )
+
 #capplan details are more hardcoded
 
 # Data loading functions ####
@@ -60,7 +63,7 @@ loadFromCapPlan <-function(queryFileName)
                         Server = "SPDBSCAP001",
                         Database ="CapPlan_rhs",
                         UID = "CapPlanHC_Reader",
-                        PWD    = rstudioapi::askForPassword("Database password (case sensitive):")
+                        PWD    = rstudioapi::askForPassword("CapPlan password (case sensitive):")
   )
   # replace this line if you want to ask for the User ID to be entered as well.
   # UID    = rstudioapi::askForPassword("Database user"),
@@ -98,8 +101,14 @@ loadFromDSDW <-function(queryFileName, dsdw_dsn)
   census_df <- loadFromCapPlan(queryFileName)
   
   #test cases for DSDW
-  queryFileName <- "adtcQuery.sql"
-  adtc_df <- loadFromDSDW(queryFileName,dsdw_dsn)
+  queryFileName <- "adtcAdmitsQuery.sql"
+  adtcAdmits_df <- loadFromDSDW(queryFileName,dsdw_dsn)
+
+  queryFileName <- "adtcDischargesQuery.sql"
+  adtcDischarges_df <- loadFromDSDW(queryFileName,dsdw_dsn)
+  
+  queryFileName <- "adtcReadmitsQuery.sql"
+  adtcReadmits_df <- loadFromDSDW(queryFileName,dsdw_dsn)
   
   queryFileName <- "reportDateQuery.sql"
   repDate_df <- loadFromDSDW(queryFileName,dsdw_dsn)
@@ -114,35 +123,52 @@ loadFromDSDW <-function(queryFileName, dsdw_dsn)
   service_df <- loadFromDSDW(queryFileName,dsdw_dsn)
 #####
 
-names(adtc_df)
-names(census_df)
-names(ed_df)
-names(repDate_df)
-names(service_df)
-names(transfers_df)
-  
 
 #add doctor service categories to data sets and filter to the target services <changed description> ####
-  target_services <- c( "Internal Medicine", "Hospitalist" )
-  
-  census_df <-census_df %>% 
-    semi_join(service_df, by="DrCode" )  %>%
-    semi_join(repDate_df, by = c("Date" = "ShortDate") ) %>%
-    filter(DoctorService %in% target_services )
-  
-  transfers_df <-transfers_df %>%
-    semi_join(service_df, by = c("OrigPhys" = "DrCode") ) %>%
-    semi_join(service_df, by = c("TransPhys" = "DrCode") ) %>%
-    semi_join(repDate_df, by = c("TransferDate" = "ShortDate") ) %>%
-    filter(DoctorService.x %in% target_services | DoctorService.y %in% target_services ) %>%
+  #  backup df's for dev purposes
+  # census_df2 <- census_df
+  # adtc_df2 <- adct_df
+  # ed_df2 <- ed_df
+  # transfers_df2 <- trnasfers_df
+  # service_df2 <-service_df
 
-  adtc_df <- adtc_df %>% 
-    semi_join(service_df, by=c("DischargeAttendingDrcode" = "DrCode" ) )  %>%
-    semi_join(repDate_df, by = c("Date" = "ShortDate") ) %>%
+  #deal with data types
+  census_df$Date <- as.POSIXct(census_df$Date, format="%Y-%m-%d", tz="UTC") 
+
+  #add service description and fiscal period
+  census_df <-census_df %>% 
+    left_join(service_df, by="DrCode" )  %>%
+    inner_join(repDate_df, by = c("Date" = "ShortDate") )%>% 
+    filter( DoctorService %in% target_services )
+
+  #add service description and fiscal period
+  transfers_df <-transfers_df %>%
+    left_join(service_df, by = c("OrigPhys" = "DrCode") ) %>%
+    left_join(service_df, by = c("TransPhys" = "DrCode") ) %>%
+    inner_join(repDate_df, by = c("TransferDate" = "ShortDate") ) %>% 
+    filter(DoctorService.x %in% target_services | DoctorService.y %in% target_services )
+  
+  #add service description and fiscal period
+  adtcAdmits_df <- adtcAdmits_df %>% 
+    left_join(service_df, by= "DrCode" )  %>%
+    inner_join(repDate_df, by = c("Date" = "ShortDate") ) %>%  
     filter( DoctorService %in% target_services )
   
+  #add service description and fiscal period
+  adtcDischarges_df <- adtcDischarges_df %>% 
+    left_join(service_df, by= "DrCode" )  %>%
+    inner_join(repDate_df, by = c("Date" = "ShortDate") ) %>%  
+    filter( DoctorService %in% target_services )
+  
+  #add service description and fiscal period
+  adtcReadmits_df <- adtcReadmits_df %>% 
+    left_join(service_df, by= "DrCode" )  %>%
+    inner_join(repDate_df, by = c("Date" = "ShortDate") ) %>%  
+    filter( DoctorService %in% target_services )
+  
+  #add service description and fiscal period
   dad_df <- dad_df %>% 
-    semi_join(service_df, by="DrCode" )  %>%
+    left_join(service_df, by="DrCode" ) %>% 
     filter( DoctorService %in% target_services )
 
 ####
