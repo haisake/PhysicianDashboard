@@ -1,139 +1,31 @@
 # Purpose: To Generate Heat Maps of client volumes for Richmond
 # Author: Hans Aisake
 # Date Created: May 15, 2019
-# Date Modified: May 16, 2019
+# Date Modified: see .git
 # Comments:
 
-# Initialization ####
-#clear workspace
-rm(list=ls())
+#extra code bits 
+#source("./SourceFiles/sourceHeader_v4.R", local = TRUE)
 
-#set library and working directories
-libPath <-"H:/Hans/R Libraries"
-.libPaths(libPath) #set the library path
+#set working directory
 wd <- "//vch.ca/departments/VCHDecisionSupport/Patient Flow/Richmond SSRS Reports/PhysicianDashboard/PhysicianDashboard/queries and scripts"
 setwd(wd)
 
-#load libraries
-library(DBI) #for database connections
-library(odbc) #for database connections
-library(dplyr) #for data manipulation
-
-#DSDW DSN
+#set parameters
 dsdw_dsn <- "AISAKE-DSSI"
-#targeted services data we want after joining
-target_services <- c( "Internal Medicine", "Hospitalist" )
+capPlanConfig <- "H:/Hans/DSN Configs/CAPPLAN.yml"
+target_services <- c( "Internal Medicine", "Hospitalist" ) #targeted services data we want after joining
+queryFileList <- c("transferQuery.sql", "censusQuery.sql", "adtcAdmitsQuery.sql", "adtcDischargesQuery.sql", "adtcReadmitsQuery.sql", "reportDateQuery.sql", "dadQuery.sql", "edQuery.sql", "doctorServicesQuery.sql")
 
-#capplan details are more hardcoded
+#load in source files
+source("./R Source Files/intialization.R", local = TRUE)
+source("./R Source Files/dataLoading.R", local = TRUE)
 
-# Data loading functions ####
+intialize() #intialize local variables and libraries
 
-#get query from a .sql file
-#requires saving as UTF-8 without signature.
-getSQL <- function(filepath)
-{
-  con = file(filepath, "r")
-  sql.string <- ""
-  
-  while (TRUE){
-    line <- readLines(con, n = 1, encoding="UTF-8")
-    
-    if ( length(line) == 0 ){
-      break
-    }
-    
-    line <- gsub("\\t", " ", line)
-    
-    if(grepl("--",line) == TRUE){
-      line <- paste(sub("--","/*",line),"*/")
-    }
-    
-    sql.string <- paste(sql.string, line)
-  }
-  
-  close(con)
-  return(sql.string)
-}
-
-#Purpose: load data from CapPlan for a specified query
-loadFromCapPlan <-function(queryFileName)
-{
-  con <- DBI::dbConnect(odbc::odbc(),
-                        Driver = "SQL Server",
-                        Server = "SPDBSCAP001",
-                        Database ="CapPlan_rhs",
-                        UID = "CapPlanHC_Reader",
-                        PWD    = rstudioapi::askForPassword("CapPlan password (case sensitive):")
-  )
-  # replace this line if you want to ask for the User ID to be entered as well.
-  # UID    = rstudioapi::askForPassword("Database user"),
-  
-  query <- getSQL(queryFileName)        #get the query string from the external query file
-  x <- dbGetQuery(con, query)  
-  
-  dbDisconnect(con) #close data base connection
-  return(x) #return the results
-}
-
-#Purpose: load data from CapPlan for a specified query
-loadFromDSDW <-function(queryFileName, dsdw_dsn)
-{
-  con <- DBI::dbConnect(odbc::odbc(),
-                        dsn = dsdw_dsn
-  )
-  # replace this line if you want to ask for the User ID to be entered as well.
-  # UID    = rstudioapi::askForPassword("Database user"),
-  
-  query <- getSQL(queryFileName)        #get the query string from the external query file
-  x <- dbGetQuery(con, query)  
-  
-  dbDisconnect(con) #close data base connection
-  return(x) #return the results
-}
-#####
-
-# Pull in data from the different environments ####
-  #test cases for cap plan
-  queryFileName <- "transferQuery.sql"
-  transfers_df <- loadFromCapPlan(queryFileName)
-  
-  queryFileName <- "censusQuery.sql"
-  census_df <- loadFromCapPlan(queryFileName)
-  
-  #test cases for DSDW
-  queryFileName <- "adtcAdmitsQuery.sql"
-  adtcAdmits_df <- loadFromDSDW(queryFileName,dsdw_dsn)
-
-  queryFileName <- "adtcDischargesQuery.sql"
-  adtcDischarges_df <- loadFromDSDW(queryFileName,dsdw_dsn)
-  
-  queryFileName <- "adtcReadmitsQuery.sql"
-  adtcReadmits_df <- loadFromDSDW(queryFileName,dsdw_dsn)
-  
-  queryFileName <- "reportDateQuery.sql"
-  repDate_df <- loadFromDSDW(queryFileName,dsdw_dsn)
-  
-  queryFileName <- "edQuery.sql"
-  ed_df <- loadFromDSDW(queryFileName,dsdw_dsn)
-  
-  queryFileName <- "dadQuery.sql"
-  testData <- loadFromDSDW(queryFileName,dsdw_dsn)
-  
-  queryFileName <- "doctorServicesQuery.sql"
-  service_df <- loadFromDSDW(queryFileName,dsdw_dsn)
-#####
-
-
-#add doctor service categories to data sets and filter to the target services <changed description> ####
-  #  backup df's for dev purposes
-  # census_df2 <- census_df
-  # adtc_df2 <- adct_df
-  # ed_df2 <- ed_df
-  # transfers_df2 <- trnasfers_df
-  # service_df2 <-service_df
+data <- loadData(queryFileList, dsdw_dsn, capPlanConfig) # Pull in datasets
 
   #deal with data types
-  census_df$Date <- as.POSIXct(census_df$Date, format="%Y-%m-%d", tz="UTC") 
 
   #add service description and fiscal period
   census_df <-census_df %>% 
