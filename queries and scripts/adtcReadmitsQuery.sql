@@ -51,3 +51,5 @@ Comments:
 	LEFT JOIN reportFP as D
 	ON ReadmissionDate is not NULL 
 	AND ReadmissionDate BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate
+
+

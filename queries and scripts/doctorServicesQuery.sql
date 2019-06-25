@@ -53,8 +53,6 @@ ON doc.drname = HospitalistName	/*name is the same*/
 AND hosp.FacilityLongName='richmond hospital'	/*richmond only*/
 LEFT JOIN ADTCMart.dim.[Service] as serv
 ON serv.ServiceID = doc.DrServiceID
+;
 
 
-
-
-						 
