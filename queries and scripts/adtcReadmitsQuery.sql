@@ -1,14 +1,9 @@
 /*
-Purpose: Pull data from ADTCMart so that we can identify discharges and identify time after discharge till a readmission.
-Want to compute volumes by day of week and time of day for discharges by physician services.
-Want to compute readmission rates by 7 and 28 days.
-For the physician dashboard
+Purpose: Pull data from ADTCMart so that we can identify readmissions.
+Want data to compute per period rates by physician services.
+7 and 28 days.
 Author: Hans Aisake
 Comments:
-
---I think I should count admission and discharges and readmission rates or something instead of pulling the raw data.
-The query takes too long
-
 */
 
 
