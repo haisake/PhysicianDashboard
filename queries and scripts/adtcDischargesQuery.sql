@@ -16,7 +16,7 @@ Comments:
 
 	/* pull discharges from ADTC mart */
 	SELECT D.FiscalPeriodLong as 'Discharge_FP'
-	, D.FiscalYear
+	, D.FiscalYear as 'Discharge_FY'
 	, DATENAME(dw, AdjustedDischargeDate) as 'Disch_DoW'
 	, DATEPART(hour, AdjustedDischargeTime ) as 'Disch_Hour'
 	, 'P' + AD.DischargeAttendingDrcode as 'DrCode'
