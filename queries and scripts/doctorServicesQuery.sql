@@ -32,17 +32,14 @@ SELECT AttendDoctorName as 'DrName'
 , 'P' + AttendDoctorCode as 'DrCode'
 , CASE WHEN hosp.HospitalistName is not null THEN 'Hospitalist'
 	   WHEN doc.drname IN ('AHMED, IQBAL', 'SAHIHOLNASAB, VAHID', 'SEHMER, BENJAMIN MICHAEL') THEN 'Internal Medicine' 
-	   WHEN doc.drname IN ('HALJAN, GREGORY JOSEPH','LAU, EDGAR SENG TEONG','BRUCE, JENNIFER ELIZABETH','WONG, JUSTIN KAI FAI') THEN 'Critical Care Medicine'
-	   ELSE serv.DADDescription
+--	   WHEN doc.drname IN ('HALJAN, GREGORY JOSEPH','LAU, EDGAR SENG TEONG','BRUCE, JENNIFER ELIZABETH','WONG, JUSTIN KAI FAI') THEN 'Critical Care Medicine'
+--	   ELSE serv.DADDescription
+	   ELSE 'Other'
 END as 'DoctorService'
 , CASE WHEN hosp.StartDate is not null THEN hosp.StartDate
-	   WHEN doc.drname IN ('AHMED, IQBAL', 'SAHIHOLNASAB, VAHID', 'SEHMER, BENJAMIN MICHAEL') THEN FirstCensusDate
-	   WHEN doc.drname IN ('HALJAN, GREGORY JOSEPH','LAU, EDGAR SENG TEONG','BRUCE, JENNIFER ELIZABETH','WONG, JUSTIN KAI FAI') THEN FirstCensusDate
 	   ELSE FirstCensusDate
 END as 'DS_StartDate'
 , CASE WHEN hosp.EndDate is not null THEN hosp.EndDate
-	   WHEN doc.drname IN ('AHMED, IQBAL', 'SAHIHOLNASAB, VAHID', 'SEHMER, BENJAMIN MICHAEL') THEN LastCensusDate
-	   WHEN doc.drname IN ('HALJAN, GREGORY JOSEPH','LAU, EDGAR SENG TEONG','BRUCE, JENNIFER ELIZABETH','WONG, JUSTIN KAI FAI') THEN LastCensusDate
 	   ELSE LastCensusDate
 END as 'DS_EndDate'	  
 FROM richmondDocs	/*for all richmond docs*/
