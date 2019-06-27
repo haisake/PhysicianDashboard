@@ -14,7 +14,7 @@ Comments:
 
 /* find the subset of the CapPlan assignments needed */
 WITH applicableEncounters AS (
-	SELECT X.AssignmentID, X.EncounterID, X.AssignmentDate, X.AssignmentEndDate, X.lu_EncounterID, X.lu_HealthCareProfessionalID
+	SELECT X.AssignmentID, X.EncounterID, X.AssignmentDate, X.AssignmentEndDate, X.lu_EncounterID, X.lu_HealthCareProfessionalID, X.lu_WardID
 	FROM [CapPlan_RHS].[dbo].[Assignments] as X
 	INNER JOIN /* only keep records with at least 2 distinct physicians otherwise there can't be any transfers of interest */
 	(	SELECT encounterID, COUNT(distinct [lu_HealthCareProfessionalID]) as 'NumProviders'
@@ -23,8 +23,8 @@ WITH applicableEncounters AS (
 		HAVING COUNT(distinct [lu_HealthCareProfessionalID]) >=2	/* need at least 2 different providers in the encounter */
 	) as Y
 	ON X.EncounterId=Y.EncounterID	/* same encounterID */
-	WHERE AssignmentEndDate >= DATEADD(month, -1, DATEADD(year,-3,GETDATE()))		/* valid history range */
-	OR AssignmentDate >= DATEADD(month, -1, DATEADD(year,-3,GETDATE()))				/* valid history range */
+	WHERE AssignmentEndDate >= DATEADD(month, -1, DATEADD(year,-1,GETDATE()))		/* valid history range */
+	OR AssignmentDate >= DATEADD(month, -1, DATEADD(year,-1,GETDATE()))				/* valid history range */
 )
 
 /*assign an ordered row number to the eligable records based on assignment startdate */
@@ -37,11 +37,13 @@ WITH applicableEncounters AS (
 
 /* identify transfer data set */
 SELECT X.EncounterID
-, X.AssignmentDate as 'TransferDate'
+, CAST(CAST(X.AssignmentDate as date) as datetime) as 'TransferDate' /* need to set to 00:00:00 to facilitate joins to dim.Date */
 , DATENAme(dw, X.AssignmentDate) as 'TransferDoW'
 , DATEPART(hour, X.AssignmentDate) as 'TransferHour'
 , X.lu_HealthCareProfessionalID as 'OrigPhys'
 , Y.lu_HealthCareProfessionalID as 'TransPhys'
+, X.lu_WardID as 'OrigUnit'
+, Y.lu_WardID as 'TransUnit'
 FROM rowNum as X
 INNER JOIN rowNum as Y
 ON X.rn=(Y.rn-1) 
