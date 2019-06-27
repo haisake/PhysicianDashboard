@@ -8,18 +8,18 @@ Comments:
 
 	/* build a table of fiscal period dates */
 	WITH reportFP AS (
-		SELECT distinct TOP 39  fiscalyear, fiscalperiodlong, fiscalperiodstartdate, fiscalperiodenddate
+		SELECT distinct TOP 26  fiscalyear, fiscalperiodlong, fiscalperiodstartdate, fiscalperiodenddate
 		FROM ADTCMart.dim.[Date]
 		WHERE FiscalPeriodEndDate < DATEADD(day, -1, GETDATE())	/* FP over for at least a year */
 		ORDER BY fiscalperiodlong desc
 	)
 
 	/* pull discharges from ADTC mart */
-	SELECT AdjustedDischargeDate
-	, D.FiscalPeriodLong as 'Discharge_FP'
+	SELECT D.FiscalPeriodLong as 'Discharge_FP'
+	, D.FiscalYear
 	, DATENAME(dw, AdjustedDischargeDate) as 'Disch_DoW'
 	, DATEPART(hour, AdjustedDischargeTime ) as 'Disch_Hour'
-	, 'P' + AD.DischargeAttendingDrcode as 'Drcode'
+	, 'P' + AD.DischargeAttendingDrcode as 'DrCode'
 	, COUNT(1) as 'NumDischarges'
 	FROM ADTCMart.adtc.vwAdmissionDischargeFact as AD
 	INNER JOIN reportFP as D
@@ -27,8 +27,8 @@ Comments:
 	WHERE AD.[site]='rmd'	/* richmond hospital only */
 	AND AD.AdjustedDischargeDate is not NULL /* patient must have been discharged */
 	AND LEFT(DischargeNursingUnitCode,1)!='M'	/* excludes ('Minoru Main Floor East','Minoru Main Floor West','Minoru Second Floor East','Minoru Second Floor West','Minoru Third Floor') */
-	GROUP BY AdjustedDischargeDate
-	, D.FiscalPeriodLong
+	GROUP BY D.FiscalPeriodLong
+	, D.FiscalYear
 	, DATENAME(dw, AdjustedDischargeDate)
 	, DATEPART(hour, AdjustedDischargeTime )
 	, 'P' + AD.DischargeAttendingDrcode

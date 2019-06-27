@@ -9,7 +9,7 @@ Comments:
 
 	/* build a table of fiscal period dates */
 	WITH reportFP AS (
-		SELECT distinct TOP 39  fiscalyear, fiscalperiodlong, fiscalperiodstartdate, fiscalperiodenddate
+		SELECT distinct TOP 26  fiscalyear, fiscalperiodlong, fiscalperiodstartdate, fiscalperiodenddate
 		FROM ADTCMart.dim.[Date]
 		WHERE FiscalPeriodEndDate < DATEADD(day, -1, GETDATE())	/* FP over for at least a year */
 		ORDER BY fiscalperiodlong desc
@@ -21,8 +21,12 @@ Comments:
 		, PatientID
 		, AdjustedAdmissionDate
 		, AdjustedDischargeDate
+		, D.FiscalPeriodLong as 'Discharge_FP'
+		, D.FiscalYear as 'Discharge_FY'
 		, 'P' + AD.DischargeAttendingDrcode as 'DischargeAttendingDrcode'
 		FROM ADTCMart.adtc.vwAdmissionDischargeFact as AD
+		INNER JOIN reportFP as D
+		ON AdjustedDischargeDate BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate
 		WHERE AD.[site]='rmd'	/* richmond hospital only */
 		AND AD.AdjustedDischargeDate is not NULL /* patient must have been discharged */
 		AND LEFT(AdmissionNursingUnitCode,1)!='M'	/* excludes ('Minoru Main Floor East','Minoru Main Floor West','Minoru Second Floor East','Minoru Second Floor West','Minoru Third Floor') */
@@ -46,10 +50,17 @@ Comments:
 	)
 
 	--add on fiscal period for the readmission
-	SELECT AdjustedDischargeDate, readmissionDate, D.FiscalPeriodLong as 'Readmission_FP', DischargeAttendingDrCode, REadmission_Any_days
+	SELECT Discharge_FP
+	, Discharge_FY
+	, DischargeAttendingDrCode
+	, SUM( IIF(Readmission_any_days BETWEEN 0 AND 7, 1, 0) ) as '7_Day_Readmits'
+	, SUM( IIF(Readmission_any_days BETWEEN 0 AND 28, 1, 0) ) as '28_Day_Readmits'
+	, SUM(1) as 'TotalAdmits'
 	FROM addReadmissions as X 
-	LEFT JOIN reportFP as D
-	ON ReadmissionDate is not NULL 
-	AND ReadmissionDate BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate
+	GROUP BY Discharge_FP
+	, Discharge_FY
+	, DischargeAttendingDrCode
+
+
 
 
