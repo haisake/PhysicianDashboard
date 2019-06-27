@@ -31,7 +31,7 @@ Comments:
 SELECT AttendDoctorName as 'DrName'
 , 'P' + AttendDoctorCode as 'DrCode'
 , CASE WHEN hosp.HospitalistName is not null THEN 'Hospitalist'
-	   WHEN doc.drname IN ('AHMED, IQBAL', 'SAHIHOLNASAB, VAHID', 'SEHMER, BENJAMIN MICHAEL') THEN 'Internal Medicine' 
+	   WHEN doc.drname IN ('AHMED, IQBAL', 'SAHIHOLNASAB, VAHID', 'SEHMER, BENJAMIN MICHAEL','SAHIHOLNASAB, SEYED VAHID') THEN 'Internal Medicine' 
 --	   WHEN doc.drname IN ('HALJAN, GREGORY JOSEPH','LAU, EDGAR SENG TEONG','BRUCE, JENNIFER ELIZABETH','WONG, JUSTIN KAI FAI') THEN 'Critical Care Medicine'
 --	   ELSE serv.DADDescription
 	   ELSE 'Other'

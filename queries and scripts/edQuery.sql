@@ -33,25 +33,26 @@ WITH fpDates AS (
 )
 
 /* Pull ED visit data. */
-SELECT startdate
-, StartDateFiscalPeriodLong
+SELECT StartDateFiscalPeriodLong
+/*
 , visitID
 , AdmittedFlag
 , BedRequestDate as 'Admit_Date'
 , DATENAME(dw, BedREquestDate) as 'Admit_DoW'
 , DATEPART(hour, BedRequestTime) as 'Admit_Hour'
 , ConsultationRequestDate
+*/
 , DATENAME(dw, ConsultationRequestDate) as 'Consult_DoW'
 , DATEPART(hour, ConsultationRequestTime) as 'Consult_Hour'
-, CASE WHEN ConsultationServiceDescription ='Internal Medicine' THEN 'GIM'
-	   WHEN ConsultationServiceDescription like '%Surgery%' THEN 'Surgeon'
-	   WHEN ConsultationServiceDescription in ('Psychiatry') THEN 'Psych'
+, CASE WHEN ConsultationServiceDescription ='Internal Medicine' THEN 'Internal Medicine'
+/*	   WHEN ConsultationServiceDescription like '%Surgery%' THEN 'Surgeon'
+	   WHEN ConsultationServiceDescription in ('Psychiatry') THEN 'Psych' */
 	   ELSE 'Other'
 END as 'ConsultationServiceDesc'
-, InpatientNursingUnitName
+, COUNT(distinct VisitID) as 'NumConsults'
 FROM EDMart.dbo.vwEDVisitIdentifiedRegional as ED
 INNER JOIN fpFyDates as D /* filter to fiscal periods of interest */
 ON ED.StartDate BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate
 WHERE ED.FacilityShortName='RHS'
-
+AND ConsultationRequestDate is not NULL
 

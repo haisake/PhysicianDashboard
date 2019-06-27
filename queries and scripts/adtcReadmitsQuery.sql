@@ -52,7 +52,7 @@ Comments:
 	--add on fiscal period for the readmission
 	SELECT Discharge_FP
 	, Discharge_FY
-	, 'P'+ DischargeAttendingDrCode as 'DischargeAttendingDrCode'
+	, DischargeAttendingDrCode as 'DischargeAttendingDrCode'
 	, SUM( IIF(Readmission_any_days BETWEEN 0 AND 7, 1, 0) ) as 'Seven_Day_Readmits'
 	, SUM( IIF(Readmission_any_days BETWEEN 0 AND 28, 1, 0) ) as 'TwentyEight_Day_Readmits'
 	, SUM(1) as 'TotalDischarges'

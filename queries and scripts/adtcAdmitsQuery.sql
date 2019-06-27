@@ -16,7 +16,7 @@ Comments:
 
 	/* pull discharges from ADTC mart */
 	SELECT D.FiscalPeriodLong as 'Admit_FP'
-	, D.FiscalYear
+	, D.FiscalYear as 'Admit_FY'
 	, [AdmissionNursingUnitCode]
 	, DATENAME(dw, AdjustedAdmissionDate) as 'Admit_DoW'
 	, DATEPART(hour, AdjustedAdmissionTime) as 'Admit_Hour'
