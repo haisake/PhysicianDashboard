@@ -28,43 +28,7 @@ dataList2 <- dataList #temporary development var
 
 dataList <- addFieldsAndFilter( dataList )
 
-  #deal with data types
 
-  #add service description and fiscal period
-  census_df <-census_df %>% 
-    left_join(service_df, by="DrCode" )  %>%
-    inner_join(repDate_df, by = c("Date" = "ShortDate") )%>% 
-    filter( DoctorService %in% target_services )
-
-  #add service description and fiscal period
-  transfers_df <-transfers_df %>%
-    left_join(service_df, by = c("OrigPhys" = "DrCode") ) %>%
-    left_join(service_df, by = c("TransPhys" = "DrCode") ) %>%
-    inner_join(repDate_df, by = c("TransferDate" = "ShortDate") ) %>% 
-    filter(DoctorService.x %in% target_services | DoctorService.y %in% target_services )
-  
-  #add service description and fiscal period
-  adtcAdmits_df <- adtcAdmits_df %>% 
-    left_join(service_df, by= "DrCode" )  %>%
-    inner_join(repDate_df, by = c("Date" = "ShortDate") ) %>%  
-    filter( DoctorService %in% target_services )
-  
-  #add service description and fiscal period
-  adtcDischarges_df <- adtcDischarges_df %>% 
-    left_join(service_df, by= "DrCode" )  %>%
-    inner_join(repDate_df, by = c("Date" = "ShortDate") ) %>%  
-    filter( DoctorService %in% target_services )
-  
-  #add service description and fiscal period
-  adtcReadmits_df <- adtcReadmits_df %>% 
-    left_join(service_df, by= "DrCode" )  %>%
-    inner_join(repDate_df, by = c("Date" = "ShortDate") ) %>%  
-    filter( DoctorService %in% target_services )
-  
-  #add service description and fiscal period
-  dad_df <- dad_df %>% 
-    left_join(service_df, by="DrCode" ) %>% 
-    filter( DoctorService %in% target_services )
 
 ####
 
