@@ -275,7 +275,7 @@ transformReadmits <- function(dataList){
   return(dataList)
 }
 
-#Purpose: transformt the DAD data
+#Purpose: transform the DAD data set. Add doctor service and consolidate. Doesn't need to be done in R but w/e. 
 transformDAD <- function(dataList) {
   #add service description and fiscal period
   dataList$dad_df <- dataList$dad_df %>% 
