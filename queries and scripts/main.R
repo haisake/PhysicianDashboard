@@ -14,7 +14,6 @@ setwd(wd)
 #set parameters
 dsdw_dsn <- "AISAKE-DSSI"
 capPlanConfig <- "H:/Hans/DSN Configs/CAPPLAN.yml"
-target_services <- c( "Internal Medicine", "Hospitalist" ) #targeted services data we want after joining
 queryFileList <- list.files()[   which( sapply(list.files(), function(x) grep(".sql",x) ) == 1 )  ] #all files with .sql in the folder
 
 #load in source files
@@ -26,7 +25,7 @@ intialize() #intialize local variables and libraries
 dataList <- loadData(queryFileList, dsdw_dsn, capPlanConfig) # Pull in datasets
 dataList2 <- dataList #temporary development var
 
-dataList <- addFieldsAndFilter( dataList )
+dataList <- addFieldsAndAggregate( dataList )
 
 
 
