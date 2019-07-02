@@ -55,4 +55,12 @@ INNER JOIN fpFyDates as D /* filter to fiscal periods of interest */
 ON ED.StartDate BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate
 WHERE ED.FacilityShortName='RHS'
 AND ConsultationRequestDate is not NULL
+GROUP BY StartDateFiscalPeriodLong
+, DATENAME(dw, ConsultationRequestDate)
+, DATEPART(hour, ConsultationRequestTime) 
+, CASE WHEN ConsultationServiceDescription ='Internal Medicine' THEN 'Internal Medicine'
+/*	   WHEN ConsultationServiceDescription like '%Surgery%' THEN 'Surgeon'
+	   WHEN ConsultationServiceDescription in ('Psychiatry') THEN 'Psych' */
+	   ELSE 'Other'
+END
 
