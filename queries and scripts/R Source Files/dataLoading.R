@@ -73,7 +73,7 @@ loadData <- function(queryFileList, dsdw_dsn,capPlanConfig){
   count <- 1 #count the itteration of the loop
   
   for (ii in queryFileList){
-    if (ii %in% c("transferQuery.sql", "censusQuery.sql") ){
+    if (ii %in% c("capplanTransferQuery.sql", "capplanCensusQuery.sql") ){
       loadedDataList[[count]] <- loadFromCapPlan(ii,capPlanConfig)
       if( "Date" %in% names(loadedDataList[[count]]) ){
         #if date is as a character change it to to a date type
