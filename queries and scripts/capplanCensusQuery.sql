@@ -32,17 +32,10 @@ END as ALCFlag
 , [lu_SpecialtyID]
 , [lu_WardID] as 'NursingUnitCode'
 , COUNT(1) as 'Census'
-/* these fields aren't required
-, [AssignmentID]
-, [EncounterID]
-, [AssignmentDate]	/*start A*/
-, [AssignmentEndDate] /*end E*/
-, isnull([lu_BedID],'UNKNOWN') as 'Bed'
-*/
 FROM [CapPlan_RHS].[dbo].[Assignments] as X
 INNER JOIN dates2 as Y
 ON Y.[Date_withHour] BETWEEN AssignmentDate AND ISNULL(AssignmentEndDate,'2050-01-01')	/* filter to days relevant between @start and @end and assign a date for computing census */
-where X.lu_wardid not like 'm[0-9]%'	/*ignore minoru*/
+where LEFT(X.lu_wardid,1)!='m'	/*ignore minoru*/
 and X.lu_wardid not in ('rhbcb','ramb') /*ignore birth center and ambulatory care*/
 GROUP BY Y.[Date]
 ,case when [lu_SpecialtyID]='ALC' then 'ALC' 
