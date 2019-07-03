@@ -161,42 +161,50 @@ transformCensus <- function(dataList){
   hour <- unique(dataList$capplanCensus_df$CensusHour) #record census hour
   
   #add service description and fiscal period
-  dataList$capplanCensus_df <- dataList$capplanCensus_df %>% 
+  x <- dataList$capplanCensus_df %>% 
     left_join( dataList$doctorServices_df, by="DrCode" )  %>%
     inner_join( dataList$reportDate_df, by = c("Date" = "ShortDate") )%>% 
     rename( censusFP = fiscalperiodlong)
-  
+
   #note who has ace service
-  index <- which(dataList$capplanCensus_df$NursingUnitCode =="R4N") #ace patients
-  dataList$capplanCensus_df$DoctorService[index] <- paste0("ACE-", dataList$capplanCensus_df$DoctorService[index])
+  index <- which(x$NursingUnitCode =="R4N") #ace patients
+  x$DoctorService[index] <- paste0("ACE-", x$DoctorService[index])
   
+  #aggregate away nursing unit
+  x <- x %>%
+    group_by(Date, censusFP, CensusHour, ALCFlag, DoctorService) %>%
+    summarize( Census = sum( Census, na.rm = TRUE) )
+ 
+  dataList$capplanCensus_df <- x
   return(dataList) #return the result
 }
 
 #Purpose: transform the admits data set. Add doctor service and consolidate
 transformAdmits <- function(dataList){
   
+  x <- dataList$adtcAdmits_df
+  
   #create an all combos data set to facilitate identification of 0 transfers in combo
   #list of dimensions for the combos
-  p = data.frame( unique( dataList$adtcAdmits_df[, c("Admit_FP","Admit_FY")] ), foo=1)
-  q = data.frame( Admit_DoW = unique( dataList$adtcAdmits_df$Admit_DoW), foo=1)
-  r = data.frame( Admit_Hour = unique( dataList$adtcAdmits_df$Admit_Hour), foo=1) #could be 0:23
+  p = data.frame( unique( x[, c("Admit_FP","Admit_FY")] ), foo=1)
+  q = data.frame( Admit_DoW = unique( x$Admit_DoW), foo=1)
+  r = data.frame( Admit_Hour = unique(x$Admit_Hour), foo=1) #could be 0:23
   s = data.frame( DoctorService = unique( dataList$doctorServices_df$DoctorService ), foo=1)
   placeholder <- p %>% left_join(q, by="foo") %>% left_join(r, by="foo") %>% left_join(s, by="foo") %>% select(-foo)
   
   #actuals
-  dataList$adtcAdmits_df <- dataList$adtcAdmits_df %>% 
+  x <- x %>% 
     left_join( dataList$doctorServices_df, by= "DrCode" )  %>%
     group_by(Admit_FP, Admit_FY, Admit_DoW, Admit_Hour, DoctorService) %>%
     summarize( NumAdmits = sum(NumAdmissions, na.rm = TRUE))
 
   #need a column to join on so we have to make a unique dummy column for DPLYR
   placeholder$key <-apply( placeholder , 1 , paste , collapse = "ZZ" )
-  dataList$adtcAdmits_df$key <- apply( dataList$adtcAdmits_df[, c("Admit_FP","Admit_FY", "Admit_DoW","Admit_Hour","DoctorService")] , 1 , paste , collapse = "ZZ" )
+  x$key <- apply( x[, c("Admit_FP","Admit_FY", "Admit_DoW","Admit_Hour","DoctorService")] , 1 , paste , collapse = "ZZ" )
   
   #combine the all combos palceholder with the observed values
   placeholder <- placeholder %>%  
-    left_join( dataList$adtcAdmits_df, by="key", suffix=c("",".y")) %>% 
+    left_join( x, by="key", suffix=c("",".y")) %>% 
     select(names(placeholder),"NumAdmits", -"key")
   placeholder$NumAdmits[is.na(placeholder$NumAdmits)] <- 0  #set 0s
   
@@ -207,27 +215,29 @@ transformAdmits <- function(dataList){
 #Purpose: transform the discharge data set. Add doctor service and consolidate
 transformDischarges <- function(dataList){
   
+  x <- dataList$adtcDischarges_df #store data by a shorter name
+  
   #create an all combos data set to facilitate identification of 0 transfers in combo
   #list of dimensions for the combos
-  p = data.frame( unique( dataList$adtcDischarges_df[, c("Discharge_FP","Discharge_FY")] ), foo=1)
-  q = data.frame( Disch_DoW = unique( dataList$adtcDischarges_df$Disch_DoW), foo=1)
-  r = data.frame( Disch_Hour = unique( dataList$adtcDischarges_df$Disch_Hour), foo=1) #could be 0:23
+  p = data.frame( unique( x[, c("Discharge_FP","Discharge_FY")] ), foo=1)
+  q = data.frame( Disch_DoW = unique( x$Disch_DoW), foo=1)
+  r = data.frame( Disch_Hour = unique( x$Disch_Hour), foo=1) #could be 0:23
   s = data.frame( DoctorService = unique( dataList$doctorServices_df$DoctorService ), foo=1)
   placeholder <- p %>% left_join(q, by="foo") %>% left_join(r, by="foo") %>% left_join(s, by="foo") %>% select(-foo)
   
   #actuals
-  dataList$adtcDischarges_df <- dataList$adtcDischarges_df %>% 
+  x <- x %>% 
     left_join( dataList$doctorServices_df, by= "DrCode" )  %>%
     group_by(Discharge_FP, Discharge_FY, Disch_DoW, Disch_Hour, DoctorService) %>%
     summarize( NumDisch = sum(NumDischarges, na.rm = TRUE))
 
   #need a column to join on so we have to make a unique dummy column for DPLYR
   placeholder$key <-apply( placeholder , 1 , paste , collapse = "ZZ" )
-  dataList$adtcDischarges_df$key <- apply( dataList$adtcDischarges_df[, c("Discharge_FP","Discharge_FY", "Disch_DoW","Disch_Hour","DoctorService")] , 1 , paste , collapse = "ZZ" )
+  x$key <- apply( x[, c("Discharge_FP","Discharge_FY", "Disch_DoW","Disch_Hour","DoctorService")] , 1 , paste , collapse = "ZZ" )
   
   #combine the all combos palceholder with the observed values
   placeholder <- placeholder %>%  
-    left_join( dataList$adtcDischarges_df, by="key", suffix=c("",".y")) %>% 
+    left_join( x, by="key", suffix=c("",".y")) %>% 
     select(names(placeholder),"NumDisch", -"key")
   placeholder$NumDisch[is.na(placeholder$NumDisch)] <- 0  #set 0s
   
@@ -238,14 +248,16 @@ transformDischarges <- function(dataList){
 #Purpose: transform the discharge data set. Add doctor service and consolidate
 transformReadmits <- function(dataList){
   
+  x <- dataList$adtcReadmits_df #stored to a shorter name
+  
   #create an all combos data set to facilitate identification of 0 transfers in combo
   #list of dimensions for the combos
-  p = data.frame( unique( dataList$adtcReadmits_df[, c("Discharge_FP","Discharge_FY")] ), foo=1)
+  p = data.frame( unique( x[, c("Discharge_FP","Discharge_FY")] ), foo=1)
   q = data.frame( DoctorService = unique( dataList$doctorServices_df$DoctorService ), foo=1)
   placeholder <- p %>% left_join(q, by="foo") %>% select(-foo)
   
   #actuals
-  dataList$adtcReadmits_df <- dataList$adtcReadmits_df %>% 
+  x<- x%>% 
     left_join( dataList$doctorServices_df, by=c("DischargeAttendingDrCode" = "DrCode") )  %>%
     group_by(Discharge_FP, Discharge_FY, DoctorService) %>%
     summarize( Seven_Day_Readmits = sum( Seven_Day_Readmits, na.rm = TRUE)
@@ -254,11 +266,11 @@ transformReadmits <- function(dataList){
   
   #need a column to join on so we have to make a unique dummy column for DPLYR
   placeholder$key <-apply( placeholder , 1 , paste , collapse = "ZZ" )
-  dataList$adtcReadmits_df$key <- apply( dataList$adtcReadmits_df[, c("Discharge_FP","Discharge_FY","DoctorService")] , 1 , paste , collapse = "ZZ" )
+  x$key <- apply( x[, c("Discharge_FP","Discharge_FY","DoctorService")] , 1 , paste , collapse = "ZZ" )
   
   #combine the all combos palceholder with the observed values
   placeholder <- placeholder %>%  
-    left_join( dataList$adtcReadmits_df, by="key", suffix=c("",".y")) %>% 
+    left_join( x, by="key", suffix=c("",".y")) %>% 
     select(names(placeholder),"Seven_Day_Readmits","TwentyEight_Day_Readmits", "TotalDischarges", -"key")
   
   placeholder$Seven_Day_Readmits[is.na(placeholder$Seven_Day_Readmits)] <- 0  #set 0s
@@ -286,29 +298,28 @@ transformDAD <- function(dataList) {
 #Purpose: transform the PtVolumes data set. Add doctor service and consolidate. Doesn't need to be done in R but w/e. 
 transformPtVolumes <- function(dataList){
 
-  #troubleshooting
-  dataList$capplanPtVolumes_df <- dataList2$capplanPtVolumes_df
+  x <- dataList$capplanPtVolumes_df
   
   #create an all combos data set to facilitate identification of 0 transfers in combo
   #list of dimensions for the combos
-  p = data.frame( FiscalPeriodLong = unique( dataList$capplanPtVolumes_df$FiscalPeriodLong ), foo=1)
-  q = data.frame( NursingUnitCode = unique( dataList$capplanPtVolumes_df$NursingUnitCode ), foo=1)
+  p = data.frame( FiscalPeriodLong = unique( x$FiscalPeriodLong ), foo=1)
+  q = data.frame( NursingUnitCode = unique( x$NursingUnitCode ), foo=1)
   r = data.frame( DoctorService = unique( dataList$doctorServices_df$DoctorService ), foo=1)
   placeholder <- p %>% left_join(q, by="foo") %>% left_join(r, by="foo") %>% select(-foo)
   
   #actuals; could be wrong if people bounce between units
-  dataList$capplanPtVolumes_df <- dataList$capplanPtVolumes_df %>% 
+  x <- x %>% 
     left_join( dataList$doctorServices_df, by= "DrCode" )  %>%
     group_by(FiscalPeriodLong, NursingUnitCode, DoctorService) %>%
     summarize( NumUniquePTs = sum(NumUniqueEncounters, na.rm = TRUE))
   
   #need a column to join on so we have to make a unique dummy column for DPLYR
   placeholder$key <-apply( placeholder , 1 , paste , collapse = "ZZ" )
-  dataList$capplanPtVolumes_df$key <- apply( dataList$capplanPtVolumes_df[, c("FiscalPeriodLong","NursingUnitCode", "DoctorService")] , 1 , paste , collapse = "ZZ" )
+  x$key <- apply( x[, c("FiscalPeriodLong","NursingUnitCode", "DoctorService")] , 1 , paste , collapse = "ZZ" )
   
   #combine the all combos palceholder with the observed values
   placeholder <- placeholder %>%  
-    left_join( dataList$capplanPtVolumes_df, by="key", suffix=c("",".y")) %>% 
+    left_join( x, by="key", suffix=c("",".y")) %>% 
     select(names(placeholder),"NumUniquePTs", -"key")
   placeholder$NumUniquePTs[is.na(placeholder$NumUniquePTs)] <- 0  #set 0s
   
