@@ -11,6 +11,8 @@ intialize <- function(){
   library(odbc) #for database connections
   library(dplyr) #for data manipulation
   library(config) #for config files for the DSNs
+  library(reshape2) # for pivoting data
+  library(ggplot2) #for plotting
 }
 
 setHansPersonalRLibrary <- function(){
