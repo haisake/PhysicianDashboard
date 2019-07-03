@@ -71,9 +71,9 @@ loadData <- function(queryFileList, dsdw_dsn,capPlanConfig){
 
   loadedDataList <- list() #result holding variable
   count <- 1 #count the itteration of the loop
-  
-  for (ii in queryFileList){
-    if (ii %in% c("capplanTransferQuery.sql", "capplanCensusQuery.sql") ){
+
+  for (ii in queryFileList){ #for each query
+    if ( grepl("capplan",ii)  ){ #if query has capplan in the name
       loadedDataList[[count]] <- loadFromCapPlan(ii,capPlanConfig)
       if( "Date" %in% names(loadedDataList[[count]]) ){
         #if date is as a character change it to to a date type
@@ -85,6 +85,7 @@ loadData <- function(queryFileList, dsdw_dsn,capPlanConfig){
       loadedDataList[[count]] <- loadFromDSDW(ii, dsdw_dsn)
     }
     count <- count + 1 #itterate count
+    
   } #end for
 
   df_names <- sapply(queryFileList, function(x) paste0(gsub("Query.sql","", x),"_df"), USE.NAMES = FALSE ) #derive name for loaded df from query name
@@ -95,62 +96,61 @@ loadData <- function(queryFileList, dsdw_dsn,capPlanConfig){
 }
 
 #Purpose: convert the loaded data to their desired state for indicator computation. Also filter out unnecessary data
-addFieldsAndAggregate <- function(dataList, target_Services){
+addFieldsAndAggregate <- function(dataList){
   
-  dataList$census_df         <- transformCensus(dataList$census_df) #census_df add service description and fiscal period
-  dataList$transfer_df       <- transformTransfers(dataList) #transfers_df add service description and fiscal period
-  dataList$adtcAdmits_df     <- transformAdmits(dataList$adtcAdmits_df)  #adctAdmits_df add service description and fiscal period
-  dataList$adtcDischarges_df <- transformDischarges(dataList$adtcDischarges_df) #
-  dataList$adtcReadmits_df   <- transformReadmits(dataList$adtcReadmits_df) #
-  dataList$dad_df            <- transformDAD(dataList$dad_df)
+  dataList <- transformCensus(dataList)
+  dataList <- transformTransfers(dataList)
+  dataList <- transformPtVolumes(dataList)
+  dataList <- transformAdmits(dataList)
+  dataList <- transformDischarges(dataList)
+  dataList <- transformReadmits(dataList)
+  dataList <- transformDAD(dataList)
   return(dataList)
 }
 
 #to transform the transfers data set to what is needed for computations
 transformTransfers <- function(dataList){
   
-  #transfers_df
+  #troubleshooting
+  #dataList$capplanTransfer_df <- dataList2$capplanTransfer_df
+  
   #add service description and fiscal period
-  dataList$transfer_df <- dataList$transfer_df %>%
+  dataList$capplanTransfer_df <- dataList$capplanTransfer_df %>%
     left_join( dataList$doctorServices_df, by = c("OrigPhys" = "DrCode") ) %>%
     left_join( dataList$doctorServices_df, by = c("TransPhys" = "DrCode") ) %>%
     inner_join( dataList$reportDate_df, by = c("TransferDate" = "ShortDate") ) %>% 
     rename(OrigService = DoctorService.x, TransService = DoctorService.y, transFP =fiscalperiodlong, transFY = fiscalyear)
   
-  #note who ahs ace service
-  index  <- which(dataList$transfer_df$OrigUnit =="R4N") #ace patients
-  index2 <- which(dataList$transfer_df$TransUnit =="R4N") #ace patients
-  index3 <- dataList$transfer_df$OrigService %in% target_services
-  dataList$transfer_df$OrigService[!index3] <-"Other"
-  index4 <- dataList$transfer_df$TransService %in% target_services
-  dataList$transfer_df$TransService[!index4] <-"Other"
-  dataList$transfer_df$OrigService[index] <- paste0("ACE-", dataList$transfer_df$OrigService[index])
-  dataList$transfer_df$TransService[index] <- paste0("ACE-", dataList$transfer_df$TransService[index])
+  #note who has ace service
+  index  <- which(dataList$capplanTransfer_df$OrigUnit =="R4N") #ace patients
+  index2 <- which(dataList$capplanTransfer_df$TransUnit =="R4N") #ace patients
+  dataList$capplanTransfer_df$OrigService[index] <- paste0("ACE-", dataList$capplanTransfer_df$OrigService[index])
+  dataList$capplanTransfer_df$TransService[index2] <- paste0("ACE-", dataList$capplanTransfer_df$TransService[index2])
   
   #aggregate up to service and drop columns and rename
-  dataList$transfer_df <- dataList$transfer_df %>%
+  dataList$capplanTransfer_df <- dataList$capplanTransfer_df %>%
     group_by(transFY, transFP, TransferDoW, TransferHour, OrigService, TransService) %>%
-    summarize( N = n())
+    summarize( NumTransfers = n())
   
   #create an all combos data set to facilitate identification of 0 transfers in combo
   #list of dimensions for the combos
-  p = data.frame( transFP = unique(dataList$transfer_df$transFP), foo=1)
-  q = data.frame( TransferDoW = unique(dataList$transfer_df$TransferDoW), foo=1)
-  r = data.frame( TransferHour = unique(dataList$transfer_df$TransferHour), foo=1)
-  s = data.frame( OrigService = as.character(unique(dataList$transfer_df$OrigService)), foo=1)
-  t = data.frame( TransService = as.character(unique(dataList$transfer_df$TransService)), foo=1)
+  p = data.frame( transFP = unique(dataList$capplanTransfer_df$transFP), foo=1)
+  q = data.frame( TransferDoW = unique(dataList$capplanTransfer_df$TransferDoW), foo=1)
+  r = data.frame( TransferHour = unique(dataList$capplanTransfer_df$TransferHour), foo=1)
+  s = data.frame( OrigService = as.character(unique(dataList$capplanTransfer_df$OrigService)), foo=1)
+  t = data.frame( TransService = as.character(unique(dataList$capplanTransfer_df$TransService)), foo=1)
   placeholder <- p %>% left_join(q, by="foo") %>% left_join(r, by="foo") %>% left_join(s, by="foo") %>% left_join(t, by="foo") %>% select(-foo)
 
   #need a column to join on so we have to make a unique dummy column for DPLYR
   placeholder$key <-apply( placeholder , 1 , paste , collapse = "ZZ" )
-  dataList$transfer_df$key <- apply( dataList$transfer_df[, c("transFP","TransferDoW","TransferHour","OrigService","TransService")] , 1 , paste , collapse = "ZZ" )
+  dataList$capplanTransfer_df$key <- apply( dataList$capplanTransfer_df[, c("transFP","TransferDoW","TransferHour","OrigService","TransService")] , 1 , paste , collapse = "ZZ" )
   
   #combine the all combos palceholder with the observed values
   placeholder <- placeholder %>%  
-    left_join(dataList$transfer_df, by="key", suffix=c("",".y")) %>% 
-    select(names(placeholder),"N", -"key")
-  placeholder$N[is.na(placeholder$N)] <- 0  #set 0s
-  dataList$transfer_df <- placeholder #put the result into the data list
+    left_join(dataList$capplanTransfer_df, by="key", suffix=c("",".y")) %>% 
+    select(names(placeholder),"NumTransfers", -"key")
+  placeholder$NumTransfers[is.na(placeholder$NumTransfers)] <- 0  #set 0s
+  dataList$capplanTransfer_df <- placeholder #put the result into the data list
   
   return(dataList) #return the result
 }
@@ -158,23 +158,17 @@ transformTransfers <- function(dataList){
 #PURPOSE: to transform the census data set to what is needed for computations
 transformCensus <- function(dataList){
   
-  hour <- unique(dataList$CensusHour) #record census hour
+  hour <- unique(dataList$capplanCensus_df$CensusHour) #record census hour
   
   #add service description and fiscal period
-  dataList$census_df <- dataList$census_df %>% 
+  dataList$capplanCensus_df <- dataList$capplanCensus_df %>% 
     left_join( dataList$doctorServices_df, by="DrCode" )  %>%
     inner_join( dataList$reportDate_df, by = c("Date" = "ShortDate") )%>% 
     rename( censusFP = fiscalperiodlong)
   
   #note who has ace service
-  index <- which(dataList$census_df$NursingUnitCode =="R4N") #ace patients
-  dataList$census_df$DoctorService[index] <- paste0("ACE-", dataList$census_df$DoctorService[index])
-  
-  #aggregate up to service
-  dataList$census_df <- dataList$census_df %>%
-    group_by(Date, censusFP, DoctorService, ALCFlag) %>%
-    summarize( census = sum(Census, na.rm = TRUE), )
-  dataList$census_df$Defintion <-paste0("Census was computed from CapPlan at ", hour, " of 24hrs")
+  index <- which(dataList$capplanCensus_df$NursingUnitCode =="R4N") #ace patients
+  dataList$capplanCensus_df$DoctorService[index] <- paste0("ACE-", dataList$capplanCensus_df$DoctorService[index])
   
   return(dataList) #return the result
 }
@@ -287,6 +281,40 @@ transformDAD <- function(dataList) {
   dataList$dad_df$ELOS_ALOS <- dataList$dad_df$Sum_ELOS/dataList$dad_df$Sum_LOS #add ELOS/ALOS by CMG
   
   return(dataList) #return result
+}
+
+#Purpose: transform the PtVolumes data set. Add doctor service and consolidate. Doesn't need to be done in R but w/e. 
+transformPtVolumes <- function(dataList){
+
+  #troubleshooting
+  dataList$capplanPtVolumes_df <- dataList2$capplanPtVolumes_df
+  
+  #create an all combos data set to facilitate identification of 0 transfers in combo
+  #list of dimensions for the combos
+  p = data.frame( FiscalPeriodLong = unique( dataList$capplanPtVolumes_df$FiscalPeriodLong ), foo=1)
+  q = data.frame( NursingUnitCode = unique( dataList$capplanPtVolumes_df$NursingUnitCode ), foo=1)
+  r = data.frame( DoctorService = unique( dataList$doctorServices_df$DoctorService ), foo=1)
+  placeholder <- p %>% left_join(q, by="foo") %>% left_join(r, by="foo") %>% select(-foo)
+  
+  #actuals; could be wrong if people bounce between units
+  dataList$capplanPtVolumes_df <- dataList$capplanPtVolumes_df %>% 
+    left_join( dataList$doctorServices_df, by= "DrCode" )  %>%
+    group_by(FiscalPeriodLong, NursingUnitCode, DoctorService) %>%
+    summarize( NumUniquePTs = sum(NumUniqueEncounters, na.rm = TRUE))
+  
+  #need a column to join on so we have to make a unique dummy column for DPLYR
+  placeholder$key <-apply( placeholder , 1 , paste , collapse = "ZZ" )
+  dataList$capplanPtVolumes_df$key <- apply( dataList$capplanPtVolumes_df[, c("FiscalPeriodLong","NursingUnitCode", "DoctorService")] , 1 , paste , collapse = "ZZ" )
+  
+  #combine the all combos palceholder with the observed values
+  placeholder <- placeholder %>%  
+    left_join( dataList$capplanPtVolumes_df, by="key", suffix=c("",".y")) %>% 
+    select(names(placeholder),"NumUniquePTs", -"key")
+  placeholder$NumUniquePTs[is.na(placeholder$NumUniquePTs)] <- 0  #set 0s
+  
+  dataList$capplanPtVolumes_df <- placeholder #put the result into the data list
+  return(dataList)
+
 }
 
 
