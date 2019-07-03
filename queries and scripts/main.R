@@ -23,8 +23,7 @@ queryFileList <- list.files()[   which( sapply(list.files(), function(x) grep(".
 
 #load in data
 dataList  <- loadData(queryFileList, dsdw_dsn, capPlanConfig) # Pull in datasets
-dataList2 <- dataList #temporary development var
-dataList  <- addFieldsAndAggregate( dataList ) #add things like service and aggregate the data when appropriate
+dataList2  <- addFieldsAndAggregate( dataList ) #add things like service and aggregate the data when appropriate
 
 #compute the indicators
 
