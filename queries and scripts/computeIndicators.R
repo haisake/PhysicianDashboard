@@ -6,7 +6,7 @@
 compID1 <- function( dataList2 ){
   
   #troubleshooting
-  x <- dataList2$x
+  x <- dataList2$capplanCensus_df
   
   #targets for indicators
   #specified targets
@@ -32,7 +32,7 @@ compID1 <- function( dataList2 ){
 compID2- function( dataList2 ){
   
   #troubleshooting
-  x  <- dataList2$x
+  x  <- dataList2$capplanCensus_df
 
   #find the distribution of census over the disciplines of interest
   x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-Internal Medicine","InternalMedicine" ) ) #remove other services
@@ -74,9 +74,9 @@ compID2- function( dataList2 ){
 }
 
 #Purpose: to compute distribution of census by TOD is typical or atypical
-compID3- function( dataList2 ){
+#compID3- function( dataList2 ){
   #removed
-}
+#}
 
 #Purpose: to compute distribution # of inpatient days by service
 compID4- function( dataList2 ){
@@ -86,7 +86,9 @@ compID4- function( dataList2 ){
   
   x <- x %>% filter( !DoctorService %in% c("Other","ACE-Other") ) #remove other services
   x <- x %>% group_by(censusFP, DoctorService) %>% summarize( drCensus = sum(Census) )
+  x <- x %>% ungroup() #ungroup
   totalCensus_df   <- x %>% group_by(censusFP) %>% summarize( totalCensus = sum(drCensus)) #total census in FP
+  totalCensus_df <- totalCensus_df %>% ungroup()
   x <- x %>% left_join(totalCensus_df, by="censusFP")
   x$distCensus <- x$drCensus/x$totalCensus
 
@@ -104,7 +106,7 @@ compID4- function( dataList2 ){
   p <- ggplot(s) + 
     geom_dotplot( aes(x=dissimilarity, fill=color) ) +      
     scale_fill_discrete(name = "Legend", labels = c("History", "CurrentValue")) +
-    ggtitle("Placeholder") + xlab("Dissimilarity Score") + ylab("Number of Elements in Bucket") +
+    ggtitle("Placeholder - Inpatient Days dist") + xlab("Dissimilarity Score") + ylab("Number of Elements in Bucket") +
     theme(axis.title.y = element_blank() , axis.ticks.y = element_blank(), axis.text.y = element_blank())
   
   #ggplot(s)+
@@ -126,18 +128,94 @@ compID4- function( dataList2 ){
 }
 
 #Purpose: to compute # of ALC days by service
-compID5a- function( x ){
-  return(-1)
+compID5a- function( dataList2 ){
+  
+  #troubleshooting
+  x <- dataList2$capplanCensus_df
+  
+  #compute the ALC days by service per fiscal period
+  x <- x %>% filter( !DoctorService %in% c("Other","ACE-Other")  ) #remove other services
+  x <- x %>% filter( ALCFlag =="ALC" )
+  x <- x %>% group_by(censusFP, DoctorService) %>% summarize( alcDays = sum(Census) )
+
+  #clean up the data object structures
+  x <- x %>% ungroup() #remove groups
+  x <- droplevels(x)   #update levels
+
+  #ggplot
+  p <- ggplot(x, aes(x=censusFP, y=alcDays, group=DoctorService, color=DoctorService)) +
+    geom_line() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+  l <- list(x,p)
+  return(l)
 }
 
 #Purpose: to compute # of ALC rate by service
-compID5b- function( x ){
-  return(-1)
+compID5b- function( dataList2 ){
+  
+  #troubleshooting
+  x <- dataList2$capplanCensus_df
+  
+  #compute the ALC days by service per fiscal period
+  x <- x %>% filter( !DoctorService %in% c("Other","ACE-Other")  ) #remove other services
+  y <- x %>% filter( ALCFlag =="ALC" )
+  y <- y %>% group_by(censusFP, DoctorService) %>% summarize( alcDays = sum(Census) )
+  x <- x %>% group_by(censusFP, DoctorService) %>% summarize( totalDays = sum(Census) )
+  
+  #clean up the data object structures
+  x <- x %>% ungroup() #remove groups
+  y <- y %>% ungroup() #remove groups
+  x <- droplevels(x)   #update levels
+  y <- droplevels(y)   #update levels
+  
+  #join the data and compute the ALC rate
+  x$key <- paste(x$censusFP, x$DoctorService, sep="-") #add a key for joining
+  y$key <- paste(y$censusFP, y$DoctorService, sep="-") #add a key for joining
+  y <- y %>% left_join(x, by="key", suffix=c("",".q") ) %>% select(names(y), totalDays ,-key)  #join the data
+  y$distAlcRate <- y$alcDays/y$totalDays #ALC Rate
+  
+  #ggplot
+  p <- ggplot(y, aes(x=censusFP, y=distAlcRate, group=DoctorService, color=DoctorService)) +
+    geom_line() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+  l <- list(y,p)
+  return(l)
 }
 
-#Purpose: Inpatient days per patient days by service
-compID6- function( x, capplanPtVolumes_df ){
-  return(-1)
+#Purpose: Inpatient days per patient by service
+compID6- function( dataList2 ){
+  
+  x <- dataList2$capplanPtVolumes_df #shorter variable
+  y <- dataList2$capplanCensus_df    #shorter variable
+  
+  #find the distribution of census over the disciplines of interest
+  x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) )  %>% rename(censusFP=FiscalPeriodLong)#remove other services
+  x <- droplevels(x)
+  x$key <-paste( x$censusFP, x$DoctorService, sep="-")
+
+  y <- y %>% 
+    filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) ) %>%
+    group_by(censusFP,DoctorService) %>%
+    summarize( ipDays = sum(Census))
+  y <- y %>% ungroup()
+  y <- droplevels(y)
+  y$key <-paste( y$censusFP, y$DoctorService, sep="-")
+  
+  #aggregate inpatient days per period by service
+  y <- y %>% left_join(x, by="key", suffix=c("",".x")) %>% select(names(y),NumUniquePTs, -key)
+  y$alos <- y$ipDays/y$NumUniquePTs
+  
+  #compute a plot summarizing similarity
+  p <- ggplot(y, aes(x=censusFP, y=alos, color=DoctorService, group=DoctorService)) +
+    geom_line() +
+    xlab("Fiscal Period")  + ylab("ALOS* (days)") + 
+    ggtitle("Inpatient days per patient by Service") +
+    theme(legend.position="bottom", axis.text.x = element_text(angle = 90, hjust = 1)) 
+  
+  l <- list(y,p) #the internal medicine ace numbers aren't stable enough
+  return(l)
 }
 
 #Purpose: Inpatient days per patient by service distribution typical or atypical
