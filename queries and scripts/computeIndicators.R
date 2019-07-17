@@ -107,7 +107,7 @@ compID4- function( dataList2 ){
     geom_dotplot( aes(x=dissimilarity, fill=color) ) +      
     scale_fill_discrete(name = "Legend", labels = c("History", "CurrentValue")) +
     ggtitle("Placeholder - Inpatient Days dist") + xlab("Dissimilarity Score") + ylab("Number of Elements in Bucket") +
-    theme(axis.title.y = element_blank() , axis.ticks.y = element_blank(), axis.text.y = element_blank())
+    theme(axis.title.y = element_blank() , axis.ticks.y = element_blank(), axis.text.y = element_blank()) 
   
   #ggplot(s)+
   #  geom_histogram(aes(x=dissimilarity, fill=labels)) +
@@ -218,9 +218,79 @@ compID6- function( dataList2 ){
   return(l)
 }
 
-#Purpose: Inpatient days per patient by service distribution typical or atypical
+#Purpose: Inpatient days per patient by service distribution typical or atypical;
 compID7- function( x, capplanPtVolumes_df ){
-  return(-1)
+  
+  x <- dataList2$capplanPtVolumes_df #shorter variable
+  y <- dataList2$capplanCensus_df    #shorter variable
+  
+  #find the distribution of census over the disciplines of interest
+  x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) )  %>% rename(censusFP=FiscalPeriodLong)#remove other services
+  x <- droplevels(x)
+  x$key <-paste( x$censusFP, x$DoctorService, sep="-")
+  
+  y <- y %>% 
+    filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) ) %>%
+    group_by(censusFP,DoctorService) %>%
+    summarize( ipDays = sum(Census))
+  y <- y %>% ungroup()
+  y <- droplevels(y)
+  y$key <-paste( y$censusFP, y$DoctorService, sep="-")
+  
+  #aggregate inpatient days per period by service
+  y <- y %>% left_join(x, by="key", suffix=c("",".x")) %>% select(names(y),NumUniquePTs, -key)
+  y$alos <- y$ipDays/y$NumUniquePTs
+  y$latestFlag <- y$censusFP==max(y$censusFP)
+  z<- y %>% filter(latestFlag==TRUE)
+  
+  #compute a plot summarizing similarity
+  p <- ggplot(y, aes(x=factor(DoctorService), y=alos)) +
+    geom_boxplot() +
+    geom_point( z, mapping = aes(x=factor(DoctorService), y=alos), color="darkorchid1", size=4, shape=18 )    
+  
+  #same y axis
+  p <- ggplot(y, aes(x =factor(1), group=factor(DoctorService), y=alos)) +
+    facet_grid( col= vars(DoctorService), scales = "free_y") +
+    geom_boxplot() +
+    geom_point( mapping = aes(x=factor(1), y=alos, color=latestFlag), size=2, shape=18 ) +
+    scale_color_discrete(name = "Legend", labels = c("Historical", "Current Period")) +
+    theme( legend.position = "bottom")
+  
+  #y axis varies
+  p <- ggplot(y, aes(x =factor(1), group=factor(DoctorService), y=alos)) +
+    facet_wrap( ~DoctorService, scales = "free_y") +
+    geom_boxplot() +
+    geom_point( mapping = aes(x=factor(1), y=alos, color=latestFlag), size=2, shape=18 ) +
+    scale_color_discrete(name = "Legend", labels = c("Historical", "Current Period")) +
+    theme( legend.position = "bottom")                         
+                            
+                            
+                            geom_point(z, aes(x=1, y=alos), color="blue") +
+    xlab("")  + ylab("ALOS* (days)") + 
+    ggtitle("Inpatient days per patient by Service Boxplots") +
+    theme(legend.position="bottom", axis.text.x = element_blank())
+    
+    
+  
+    
+  
+  #typical or atypical flag
+  for(ii unique(y$DoctorService)){
+    quantile(y$alos,c(0.15)) <= y$alos[1] & y$alos[1] <= quantile(y$alos,c(0.85))
+  }
+  
+  flag <- ( quantile(y$alos,c(0.15)) <= s$dissimilarity[1] & s$dissimilarity[1] <= quantile(s$dissimilarity,c(0.85)) )
+  
+  if(flag){
+    flag <-"Typical"
+  }else{
+    flag <-"Atypical"
+  }
+  
+  l <- list(y,p) #the internal medicine ace numbers aren't stable enough
+  return(l)
+  
+
 }
 
 #Purpose: ALOS/ELOS
