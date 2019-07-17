@@ -5,3 +5,5 @@ queries and scripts/.Rhistory
 *.csv
 queries and scripts/.Rhistory
 queries and scripts/.Rhistory
+queries and scripts/Alternative Queries/adtcAdmitsQuery.sql
+queries and scripts/Alternative Queries/censusQueryLM.sql
