@@ -73,7 +73,7 @@ compID2 <- function( dataList2 ){
   return(l)
 }
 
-#Purpose: to compute distribution of census by TOD is typical or atypical
+#Purpose: to compute distribution of census by TOD is typical or atypical; removed takes too much data and effort to extract
 #compID3- function( dataList2 ){
   #removed
 #}
@@ -370,19 +370,27 @@ compID9 <- function( dad_df ){
   return(l)
 }
 
-#Purpose: Admission rate by service
-compID10 <- function( missing ){
-  return(-1)
-}
+#Purpose: Admission rate by service; not possible we don't have denominators
+# compID10 <- function( dataList2 ){
+#   return(-1)
+# }
 
-#Purpose: Admission volumes by TOd and Service distribution typical or atypical
-compID11 <- function( adtcAdmits_df ){
-  return(-1)
+#Purpose: Admission volumes by TOD typical or atypical ; huh typical what?
+compID11 <- function( dataList2 ){
+  
+  x <-dataList2$adtcAdmits_df #shorter variable name
+  x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) )
+  
+  return(x)
 }
 
 #Purpose: Discharges volumes by TOd and Service distribution typical or atypical
 compID12 <- function( adtcDischarges_df ){
-  return(-1)
+  
+  x <-dataList2$adtcDischarge_df #shorter variable name
+  x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) )
+
+
 }
 
 #Purpose: ED consults by service
