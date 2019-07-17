@@ -29,7 +29,7 @@ compID1 <- function( dataList2 ){
 
 #Purpose: to compute distribution of census by services is typical or atypical
 #Returns a plot and a final flag variable for atypical and typical in a list of 2
-compID2- function( dataList2 ){
+compID2 <- function( dataList2 ){
   
   #troubleshooting
   x  <- dataList2$capplanCensus_df
@@ -79,7 +79,7 @@ compID2- function( dataList2 ){
 #}
 
 #Purpose: to compute distribution # of inpatient days by service
-compID4- function( dataList2 ){
+compID4 <- function( dataList2 ){
   
   #troubleshooting
   x <- dataList2$capplanCensus_df
@@ -128,7 +128,7 @@ compID4- function( dataList2 ){
 }
 
 #Purpose: to compute # of ALC days by service
-compID5a- function( dataList2 ){
+compID5a <- function( dataList2 ){
   
   #troubleshooting
   x <- dataList2$capplanCensus_df
@@ -152,7 +152,7 @@ compID5a- function( dataList2 ){
 }
 
 #Purpose: to compute # of ALC rate by service
-compID5b- function( dataList2 ){
+compID5b <- function( dataList2 ){
   
   #troubleshooting
   x <- dataList2$capplanCensus_df
@@ -185,7 +185,7 @@ compID5b- function( dataList2 ){
 }
 
 #Purpose: Inpatient days per patient by service
-compID6- function( dataList2 ){
+compID6 <- function( dataList2 ){
   
   x <- dataList2$capplanPtVolumes_df #shorter variable
   y <- dataList2$capplanCensus_df    #shorter variable
@@ -219,7 +219,7 @@ compID6- function( dataList2 ){
 }
 
 #Purpose: Inpatient days per patient by service distribution typical or atypical;
-compID7- function( x, capplanPtVolumes_df ){
+compID7 <- function( dataList2 ){
   
   x <- dataList2$capplanPtVolumes_df #shorter variable
   y <- dataList2$capplanCensus_df    #shorter variable
@@ -294,32 +294,99 @@ compID7- function( x, capplanPtVolumes_df ){
 }
 
 #Purpose: ALOS/ELOS
-compID8- function( dad_df ){
-  return(-1)
+compID8 <- function( dataList2 ){
+  
+  x <- dataList2$dad_df
+  x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) ) %>%
+    group_by(FiscalPeriodLong, DoctorService) %>%
+    summarize( LOS = sum(Sum_LOS), ELOS = sum(Sum_ELOS), N=n() )
+  x <- x %>% ungroup()
+  x$LOS_ELOS <- x$LOS/x$ELOS
+  
+  return(x)
 }
 
-#Purpose: ALOS/ELOS top 5 most significant
-compID9- function( dad_df ){
-  return(-1)
+
+#Purpose: ALOS/ELOS top 5 most significant CMGs
+compID9 <- function( dad_df ){
+  
+  x <- dataList2$dad_df
+  x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) ) %>%
+    group_by(CMG) %>%
+    summarize( LOS = sum(Sum_LOS), ELOS = sum(Sum_ELOS), N=n() )
+  x <- x %>% ungroup()
+  x$LOS_ELOS <- x$LOS/x$ELOS
+  
+  #based on computations I made in 2016 ~ Control Limit Methodologyv5b
+  #G:\Projects (Dept VC)\Patient Flow Project\VCHSummary\ALOS vs ELOS national study
+  #sigma squared was computed as 0.45 see Master Data Extract FileV3 - 2013 version.
+  #it has to use all the DAD, not just what we pulled here.
+  sigmaSQ <- 0.45
+  z95 <-qnorm(0.05)
+  z99 <-qnorm(0.01)
+  num =(exp(sigmaSQ)-1)
+  
+  fit95 <- data.frame(lwr95 = 1:max(x$N), upr95 = 1:max(x$N), N= 1:max(x$N))
+  fit95$lwr95 <- 1-z95*sqrt(num/fit95$lwr95)
+  fit95$upr95 <- 1+z95*sqrt(num/fit95$upr95)
+  
+  fit99 <- data.frame(lwr99 = 1:max(x$N), upr99 = 1:max(x$N), N= 1:max(x$N))
+  fit99$lwr99 <- 1-z99*sqrt(num/fit99$lwr99)
+  fit99$upr99 <- 1+z99*sqrt(num/fit99$upr99)
+  
+  x <- x %>% left_join( fit95, by = "N", suffix=c("","T") ) %>%
+    left_join( fit99, by = "N", suffix=c("","G") ) 
+  
+  #find the 5 significant points; any point above 99 upr
+  index <- which(x$LOS_ELOS >= x$upr99)
+  sigBad <- x[index,]
+  sigBad <- sigBad[order(sigBad$N, decreasing = TRUE),]
+  sigBad <- sigBad[1:5,]
+  
+  #find the 5 best success points
+  index <- which(x$LOS_ELOS <= x$lwr99)
+  sigGood <- x[index,]
+  sigGood <- sigGood[order(sigGood$N, decreasing = TRUE),]
+  sigGood <- sigGood[1:5,]
+  
+  #create a funnel plot
+  p <- ggplot(x, aes(x=N, y=LOS_ELOS)) +
+    geom_point(shape=1) + 
+    geom_hline(yintercept=1) +
+    geom_line(aes(y = upr95), color="black", linetype=2) + 
+    geom_line(aes(x=N, y = lwr95), color="black", linetype=2) +
+    geom_line(aes(x=N, y = upr99), color="red", linetype=3) + 
+    geom_line(aes(x=N, y = lwr99), color="red", linetype=3)  + 
+    annotate("text", 15, 3.2, label="95% limit", colour="black", 
+             size=3, hjust=0) +
+    annotate("text", 15, 3.5, label="99.9% limit", colour="red", 
+             size=3, hjust=0) +
+    labs(x="No. Discharges", y="ALOS/ELOS") +    
+    theme_bw()
+  
+  #results
+  l <-list(sigBad, sigGood, p)
+ 
+  return(l)
 }
 
 #Purpose: Admission rate by service
-compID10- function( missing ){
+compID10 <- function( missing ){
   return(-1)
 }
 
 #Purpose: Admission volumes by TOd and Service distribution typical or atypical
-compID11- function( adtcAdmits_df ){
+compID11 <- function( adtcAdmits_df ){
   return(-1)
 }
 
 #Purpose: Discharges volumes by TOd and Service distribution typical or atypical
-compID12- function( adtcDischarges_df ){
+compID12 <- function( adtcDischarges_df ){
   return(-1)
 }
 
 #Purpose: ED consults by service
-compID13- function( ed_df ){
+compID13 <- function( ed_df ){
   return(-1)
 }
 
