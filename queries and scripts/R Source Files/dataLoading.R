@@ -205,15 +205,15 @@ transformAdmits <- function(dataList){
   p = data.frame( unique( x[, c("Admit_FP","Admit_FY")] ), foo=1)
   q = data.frame( Admit_DoW = unique( x$Admit_DoW), foo=1)
   r = data.frame( Admit_Hour = unique(x$Admit_Hour), foo=1) #could be 0:23
-  s = data.frame( DoctorService = unique( dataList$doctorServices_df$DoctorService ), foo=1)
+  s = data.frame( DoctorService =  c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine","Other" ), foo=1)
   placeholder <- p %>% left_join(q, by="foo") %>% left_join(r, by="foo") %>% left_join(s, by="foo") %>% select(-foo)
   
   #actuals
-  x <- x %>% 
-    left_join( dataList$doctorServices_df, by= "DrCode" )  %>%
-    group_by(Admit_FP, Admit_FY, Admit_DoW, Admit_Hour, DoctorService) %>%
-    summarize( NumAdmits = sum(NumAdmissions, na.rm = TRUE))
-
+  x <- x %>% left_join( dataList$doctorServices_df, by= "DrCode", suffix=c("",".y") ) %>% select(names(x),"DoctorService")
+  index  <- which(x$AdmissionNursingUnitCode =="R4N") #ace patients
+  x$DoctorService[index] <- paste0("ACE-", x$DoctorService[index]) #update doctor service with ACE tag
+  x <- x %>% group_by(Admit_FP, Admit_FY, Admit_DoW, Admit_Hour, DoctorService) %>% summarize( NumAdmits = sum(NumAdmissions, na.rm = TRUE))
+  
   #need a column to join on so we have to make a unique dummy column for DPLYR
   placeholder$key <-apply( placeholder , 1 , paste , collapse = "ZZ" )
   x$key <- apply( x[, c("Admit_FP","Admit_FY", "Admit_DoW","Admit_Hour","DoctorService")] , 1 , paste , collapse = "ZZ" )
@@ -238,13 +238,14 @@ transformDischarges <- function(dataList){
   p = data.frame( unique( x[, c("Discharge_FP","Discharge_FY")] ), foo=1)
   q = data.frame( Disch_DoW = unique( x$Disch_DoW), foo=1)
   r = data.frame( Disch_Hour = unique( x$Disch_Hour), foo=1) #could be 0:23
-  s = data.frame( DoctorService = unique( dataList$doctorServices_df$DoctorService ), foo=1)
+  s = data.frame( DoctorService =  c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine","Other" ), foo=1)
   placeholder <- p %>% left_join(q, by="foo") %>% left_join(r, by="foo") %>% left_join(s, by="foo") %>% select(-foo)
   
   #actuals
-  x <- x %>% 
-    left_join( dataList$doctorServices_df, by= "DrCode" )  %>%
-    group_by(Discharge_FP, Discharge_FY, Disch_DoW, Disch_Hour, DoctorService) %>%
+  x <- x %>% left_join( dataList$doctorServices_df, by= "DrCode", suffix=c("",".y") ) %>% select(names(x),"DoctorService")
+  index  <- which(x$AdmissionNursingUnitCode =="R4N") #ace patients
+  x$DoctorService[index] <- paste0("ACE-", x$DoctorService[index]) #update doctor service with ACE tag
+  x <- x %>% group_by(Discharge_FP, Discharge_FY, Disch_DoW, Disch_Hour, DoctorService) %>%
     summarize( NumDisch = sum(NumDischarges, na.rm = TRUE))
 
   #need a column to join on so we have to make a unique dummy column for DPLYR
@@ -350,6 +351,21 @@ transformPtVolumes <- function(dataList){
   dataList$capplanPtVolumes_df <- placeholder #put the result into the data list
   return(dataList)
 
+}
+
+#load from Excel
+readFromExcel <- function(){
+  file <- "G:/VCHDecisionSupport/Patient Flow/Richmond SSRS Reports/PhysicianDashboard/PhysicianDashboard/Manaul Data/Data.xlsx"
+  
+  dataList <- list()
+  for (ii in 1:length(queryFileList)){
+    dataList[[ii]] <- read_excel(file, sheet = ii)
+  }
+  
+  n <- paste0(gsub("Query.sql", "", queryFileList),"_df")
+  names(dataList) <- n
+  
+  return(dataList)
 }
 
 
