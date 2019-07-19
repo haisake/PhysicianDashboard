@@ -44,7 +44,7 @@ compID2 <- function( dataList2 ){
 
   #compute the distance between the days
   x <- x %>% select(Date, DoctorService, distCensus)
-  x <- dcast(data=x,  formula = Date ~ DoctorService, value.var = "distCensus")
+  x <- dcast(data=x,  formula = Date ~ DoctorService, value.var = "distCensus", sum)
   x <- x[order(x$Date, decreasing = TRUE),] #order so the most recent is row 1
   x[is.na(x)]<-0 #replace NA with 0; it's actually a 0
   d <- suppressWarnings(dist(x, method = "manhattan"))
@@ -79,7 +79,7 @@ compID2 <- function( dataList2 ){
 #}
 
 #Purpose: to compute distribution # of inpatient days by service
-compID4 <- function( dataList2 ){
+compID4a <- function( dataList2 ){
   
   #troubleshooting
   x <- dataList2$capplanCensus_df
@@ -92,9 +92,26 @@ compID4 <- function( dataList2 ){
   x <- x %>% left_join(totalCensus_df, by="censusFP")
   x$distCensus <- x$drCensus/x$totalCensus
 
+  return(x)
+}
+
+#Purpose: to compute distribution # of inpatient days by service typical or atypical
+compID4b <- function( dataList2 ){
+  
+  #troubleshooting
+  x <- dataList2$capplanCensus_df
+  
+  x <- x %>% filter( !DoctorService %in% c("Other","ACE-Other") ) #remove other services
+  x <- x %>% group_by(censusFP, DoctorService) %>% summarize( drCensus = sum(Census) )
+  x <- x %>% ungroup() #ungroup
+  totalCensus_df   <- x %>% group_by(censusFP) %>% summarize( totalCensus = sum(drCensus)) #total census in FP
+  totalCensus_df <- totalCensus_df %>% ungroup()
+  x <- x %>% left_join(totalCensus_df, by="censusFP")
+  x$distCensus <- x$drCensus/x$totalCensus
+  
   #compute the distance between the days
   x <- x %>% select(censusFP, DoctorService, distCensus)
-  x <- dcast(data=x,  formula = censusFP ~ DoctorService, value.var = "distCensus")
+  x <- dcast(data=x,  formula = censusFP ~ DoctorService, value.var = "distCensus", sum)
   x <- x[order(x$censusFP, decreasing = TRUE),] #order so the most recent is row 1
   x[is.na(x)]<-0 #replace NA with 0; it's actually a 0
   d <- suppressWarnings(dist(x, method = "manhattan"))
@@ -112,7 +129,7 @@ compID4 <- function( dataList2 ){
   #ggplot(s)+
   #  geom_histogram(aes(x=dissimilarity, fill=labels)) +
   #  scale_fill_discrete(name = "Legend", labels = c("Current", "History"))
- 
+  
   #typical or atypical flag
   flag <- ( quantile(s$dissimilarity,c(0.15)) <= s$dissimilarity[1] & s$dissimilarity[1] <= quantile(s$dissimilarity,c(0.85)) )
   
@@ -123,7 +140,7 @@ compID4 <- function( dataList2 ){
   }
   
   l <- list(flag,p)
-
+  
   return(l)
 }
 
@@ -366,6 +383,7 @@ compID9 <- function( dad_df ){
   
   #results
   l <-list(sigBad, sigGood, p)
+  names(l) <- c("sigBad","sigGood","FunnelPlot")
  
   return(l)
 }
@@ -375,8 +393,8 @@ compID9 <- function( dad_df ){
 #   return(-1)
 # }
 
-#Purpose: Admission volumes by TOD typical or atypical ; huh typical what?
-compID11 <- function( dataList2 ){
+#Purpose: Admission volumes by TOD and service
+compID11a <- function( dataList2 ){
   
   x <-dataList2$adtcAdmits_df #shorter variable name
   x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) )
@@ -384,17 +402,181 @@ compID11 <- function( dataList2 ){
   return(x)
 }
 
-#Purpose: Discharges volumes by TOd and Service distribution typical or atypical
-compID12 <- function( adtcDischarges_df ){
+#Purpose: Admission volumes by TOD typical or atypical current period vs. historical
+#Comments: ACE-Hospitalist, and ACE -Internal Medicine don't get any admits. Is that true?
+compID11b <- function( dataList2 ){
   
-  x <-dataList2$adtcDischarge_df #shorter variable name
+  x <-dataList2$adtcAdmits_df #shorter variable name
+  x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) )
+  
+  #unique services
+  temp <-unique(x$DoctorService)
+  l <- list() #result holder
+
+  #for each service find out if the pattern is typical
+  for (ii in 1:length(temp) ) {
+    y <- x %>% filter( DoctorService ==temp[ii] ) #filter to service
+    
+    #compute the distance between the days
+    y <- y %>% select(Admit_FP, Admit_DoW, Admit_Hour, NumAdmits)
+    y <- dcast(data=y,  formula = Admit_FP ~ Admit_DoW + Admit_Hour, value.var = "NumAdmits", sum)
+    y <- y[order(y$Admit_FP, decreasing = TRUE),] #order so the most recent is row 1
+    y[is.na(y)]<-0 #replace NA with 0; it's actually a 0
+    d <- suppressWarnings(dist(y, method = "manhattan"))
+    d <- as.matrix(d)
+    s <- data.frame( dissimilarity = rowSums(d), group=1, CurrentDayValue = rowSums(d)[1] , labels=c("Current Period",rep("History",nrow(d)-1)), color=c("Blue",rep("Black",nrow(d)-1)) )
+    msg <- max(y$Admit_FP)
+    
+    #compute a plot summarizing similarity
+    p <- ggplot(s, aes(x=group, y=dissimilarity)) + 
+      geom_boxplot(outlier.colour="red", outlier.shape=8) + 
+      geom_dotplot(binaxis='y', stackdir='center', dotsize=0.3) +
+      geom_hline( aes(yintercept=CurrentDayValue, color=paste0("Red-Current Day-",msg) ) ) +
+      labs(color = "") + xlab(" ")  + ylab("Dissimilarity") + ggtitle(paste0("Dissimilarity of Admits by DoW, ToD Service ",temp[ii]) ) +
+      theme(legend.position="bottom",  axis.ticks.x=element_blank(),axis.text.x=element_blank())
+    
+    #typical or atypical flag
+    flag <- ( quantile(s$dissimilarity,c(0.15)) <= s$dissimilarity[1] & s$dissimilarity[1] <= quantile(s$dissimilarity,c(0.85)) )
+    
+    if(flag){
+      flag <-"Typical"
+    }else{
+      flag <-"Atypical"
+    }
+    
+    k <- list(flag,p)
+    l[[ii]] <- k
+  }
+ 
+  return(l)
+}
+
+#Purpose: Discharges volumes by TOd and Service distribution typical or atypical
+compID12a <- function( dataList2 ){
+  
+  x <- dataList2$adtcDischarge_df #shorter variable name
   x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) )
 
+  return(x)
+}
 
+#Purpose: Admission volumes by TOD typical or atypical current period vs. historical
+#Comments: ACE-Hospitalist, and ACE -Internal Medicine don't get any admits. Is that true?
+compID12b <- function( dataList2 ){
+  
+  x <- dataList2$adtcDischarges_df #shorter variable name
+  x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) )
+  
+  #unique services
+  temp <-unique(x$DoctorService)
+  l <- list() #result holder
+  
+  #for each service find out if the pattern is typical
+  for (ii in 1:length(temp) ) {
+    y <- x %>% filter( DoctorService ==temp[ii] ) #filter to service
+    
+    #compute the distance between the days
+    y <- y %>% select(Discharge_FP, Disch_DoW, Disch_Hour, NumDisch)
+    y <- dcast(data=y,  formula = Discharge_FP ~ Disch_DoW + Disch_Hour, value.var = "NumDisch", sum)
+    y <- y[order(y$Admit_FP, decreasing = TRUE),] #order so the most recent is row 1
+    y[is.na(y)]<-0 #replace NA with 0; it's actually a 0
+    d <- suppressWarnings(dist(y, method = "manhattan"))
+    d <- as.matrix(d)
+    s <- data.frame( dissimilarity = rowSums(d), group=1, CurrentDayValue = rowSums(d)[1] , labels=c("Current Period",rep("History",nrow(d)-1)), color=c("Blue",rep("Black",nrow(d)-1)) )
+    msg <- max(y$Admit_FP)
+    
+    #compute a plot summarizing similarity
+    p <- ggplot(s, aes(x=group, y=dissimilarity)) + 
+      geom_boxplot(outlier.colour="red", outlier.shape=8) + 
+      geom_dotplot(binaxis='y', stackdir='center', dotsize=0.3) +
+      geom_hline( aes(yintercept=CurrentDayValue, color=paste0("Red-Current Day-",msg) ) ) +
+      labs(color = "") + xlab(" ")  + ylab("Dissimilarity") + ggtitle(paste0("Dissimilarity of Admits by DoW, ToD Service ",temp[ii]) ) +
+      theme(legend.position="bottom",  axis.ticks.x=element_blank(),axis.text.x=element_blank())
+    
+    #typical or atypical flag
+    flag <- ( quantile(s$dissimilarity,c(0.15)) <= s$dissimilarity[1] & s$dissimilarity[1] <= quantile(s$dissimilarity,c(0.85)) )
+    
+    if(flag){
+      flag <-"Typical"
+    }else{
+      flag <-"Atypical"
+    }
+    
+    k <- list(flag,p)
+    l[[ii]] <- k
+  }
+  
+  return(l)
 }
 
 #Purpose: ED consults by service
-compID13 <- function( ed_df ){
+compID13 <- function( dataList2 ){
+  
+  x <- dataList2$edConsults_df
+  x$Consult_DoW <- as.factor(x$Consult_DoW)
+  x$Consult_Hour <- as.factor(x$Consult_Hour)
+  x$ConsultationServiceDesc <- as.factor(x$ConsultationServiceDesc)
+  
+  
+  
+  #split data into training and test
+  # ii <- 1:nrow(x)
+  # ind <- sample(ii, floor(nrow(x)*0.75), replace =FALSE)
+  # train  <- x[ind,]
+  # test <- x[-ind,]
+  # #MSE 1.799 training, 1.834 test. Close enough.
+  # 
+  # #
+  # m1 <- lm(data = train, NumConsults ~ ConsultationServiceDesc + Consult_Hour + Consult_DoW)
+  # z <- predict(m1, test)
+  # 
+  # sqrt(sum((test$NumConsults-z)^2)/length(z))
+  
+  m1 <- lm(data = x, NumConsults ~ ConsultationServiceDesc + Consult_Hour + Consult_DoW)
+  # m2 <- lm(data = x, NumConsults ~ ConsultationServiceDesc + Consult_Hour)
+  # m3 <- lm(data = x, NumConsults ~ ConsultationServiceDesc + Consult_DoW)
+  m4 <- lm(data = x, NumConsults ~ ConsultationServiceDesc + Consult_Hour + Consult_DoW + Consult_Hour:Consult_DoW)
+  # summary(m1) # F190.9 pval <2.2e-16; 0.3774 Rsq
+  # summary(m2) # F235.9 pval <2.2e-16; 0.3749 Rsq
+  # summary(m3) # F355.5 pval <2.2e-16; 0.2089 Rsq
+  # summary(m4) # F35.16 pval <2.2e-16; 0.3791 Rsq
+  # 
+  # AIC(m1,m2,m3) #supports M1 as the best model, but i barely edges out m2
+  # anova(m2,m1) #supports that the adding DoW with hours is worth the extra variable
+  
+  df1.coeffs <- 
+    tidy(m1) %>% 
+    mutate(lower = estimate - 1.96 * std.error, 
+           upper = estimate + 1.96 * std.error)
+
+  #labels
+  z <- data.frame(term=as.character(1:23), label =c("01AM", "02AM", "03AM", "04AM", "05AM", "06AM", "07AM", "08AM", "09AM", "10AM", "11AM", "12PM", "01PM", "02PM", "03PM", "04PM", "05PM", "06PM", "07PM", "08PM", "09PM", "10PM", "11PM") )
+  z$label <- factor(z$label, levels = z$label)
+  
+  df1.coeffs %>% 
+    filter(grepl("Hour", term)) %>% 
+    mutate(term = substring(term, 13)) %>%
+    left_join(z, by="term") %>%
+    ggplot()  +
+    geom_pointrange(aes(x = label, 
+                        ymin = lower, 
+                        ymax = upper, 
+                        y = estimate)) + 
+    geom_hline(yintercept = 0) + 
+    
+    scale_y_continuous(limits = c(-2, 2), 
+                       breaks = seq(-10, 10, 4)) + 
+    
+    labs(x = "Time of Day", 
+         y = "Difference in average daily ED consult requests" ,
+         title = "RHS ED \nImpact of Time of Day on average daily ED consult requests", 
+         subtitle = "These estimates control for day of week and consult service requested \n\nBaseline - 12AM") + 
+    theme_light() +
+    theme(panel.grid.minor = element_line(colour = "grey95"), 
+          panel.grid.major = element_line(colour = "grey95"),
+          axis.text.x = element_text(angle = 90, hjust = 1))
+
+  
   return(-1)
 }
 
