@@ -34,7 +34,7 @@
 		END as 'LLOSDays'
 		, 'P' + AttendDoctorCode as 'DrCode'
 		, D.fiscalPeriodLong
-		, ADTC.FacilityLongName
+		, NursingUnitCode
 		, ADTC.PatientId
 		FROM ADTCMart.[ADTC].[vwCensusFact] as ADTC
 		INNER JOIN reportFP as D 
@@ -49,11 +49,13 @@
 	)
 
 	SELECT 	DrCode
+	, NursingUnitCode
 	, FiscalPeriodLong
 	, SUM(LLOSDays) as 'LLOSDays'
 	, COUNT(distinct PatientID) as 'NumLLOSPatients'
 	FROM LLOSData
 	GROUP BY DrCode
+	, NursingUnitCode
 	, FiscalPeriodLong
 
 	
