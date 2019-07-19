@@ -25,6 +25,17 @@ queryFileList <- list.files()[   which( sapply(list.files(), function(x) grep(".
 dataList  <- loadData(queryFileList, dsdw_dsn, capPlanConfig) # Pull in datasets
 dataList2 <- addFieldsAndAggregate( dataList ) #add things like service and aggregate the data when appropriate
 
+#load from excel
+# file <- "G:/VCHDecisionSupport/Patient Flow/Richmond SSRS Reports/PhysicianDashboard/PhysicianDashboard/Manaul Data/Data.xlsx"
+# 
+# dataList <- list()
+# for (ii in 1:length(queryFileList)){
+#   dataList[[ii]] <- read_excel(file, sheet = ii)
+# }
+# 
+# n <- paste0(gsub("Query.sql", "", queryFileList),"_df")
+# names(dataList) <- n
+
 #compute the indicators
 
 
