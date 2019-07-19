@@ -28,7 +28,7 @@
 	)
 
 	, LLOSData as (
-		SELECT  -- Identify number of days greater than 30
+		SELECT  /* Identify number of days greater than 30 */
 		CASE WHEN ADTC.AdmittoCensusDays > 210 THEN 180
 			 ELSE ADTC.AdmittoCensusDays-30 
 		END as 'LLOSDays'
@@ -38,15 +38,14 @@
 		, ADTC.PatientId
 		FROM ADTCMart.[ADTC].[vwCensusFact] as ADTC
 		INNER JOIN reportFP as D 
-		ON ADTC.CensusDate  BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate --pull census for the fiscal period
-		WHERE ADTC.age>1				--P4P standard definition to exclude newborns.
-		AND ADTC.AdmittoCensusDays > 30	--only need the LLOS patients, I'm not interested in proportion of all clients
-		AND (ADTC.HealthAuthorityName = 'Vancouver Coastal' -- only include residents of Vancouver Coastal
-		OR (ADTC.HealthAuthorityName = 'Unknown BC' AND (ADTC.IsHomeless = '1' OR ADTC.IsHomeless_PHC = '1'))) -- Include Unknown BC homeless population
-		AND ADTC.[Site] ='rmd'									--only include census at Richmond
-		AND ADTC.AccountType in ('I', 'Inpatient', '391')		--the code is different for each facility. Richmond is Inpatient
-		AND ADTC.AccountSubtype in ('Acute')					--the true inpatient classification is different for each site. This is the best guess for Richmond
-		--didn't have filters for patient service. that might be wrong on my part
+		ON ADTC.CensusDate  BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate  /* pull census for the fiscal period */
+		WHERE ADTC.age>1				/* P4P standard definition to exclude newborns. */
+		AND ADTC.AdmittoCensusDays > 30	/* only need the LLOS patients, I'm not interested in proportion of all clients */
+		AND (ADTC.HealthAuthorityName = 'Vancouver Coastal' /* only include residents of Vancouver Coastal */
+		OR (ADTC.HealthAuthorityName = 'Unknown BC' AND (ADTC.IsHomeless = '1' OR ADTC.IsHomeless_PHC = '1'))) /* Include Unknown BC homeless population */
+		AND ADTC.[Site] ='rmd'									/* only include census at Richmond */
+		AND ADTC.AccountType in ('I', 'Inpatient', '391')		/* the code is different for each facility. Richmond is Inpatient */
+		AND ADTC.AccountSubtype in ('Acute')					/* the true inpatient classification is different for each site. This is the best guess for Richmond */
 	)
 
 	SELECT 	DrCode
