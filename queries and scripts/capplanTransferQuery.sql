@@ -42,8 +42,8 @@ SELECT X.EncounterID
 , DATEPART(hour, X.AssignmentDate) as 'TransferHour'
 , X.lu_HealthCareProfessionalID as 'OrigPhys'
 , Y.lu_HealthCareProfessionalID as 'TransPhys'
-, X.lu_WardID as 'OrigUnit'
-, Y.lu_WardID as 'TransUnit'
+, CASE WHEN X.[lu_WardID] ='R4N' AND X.[AssignmentDate] >= '2018-10-19' THEN 'ACE' ELSE 'NOTACE' END as 'Orig_ACE_Flag'
+, CASE WHEN Y.[lu_WardID] ='R4N' AND X.[AssignmentDate] >=' 2018-10-19' THEN 'ACE' ELSE 'NOTACE' END as 'Trans_ACE_Flag'
 FROM rowNum as X
 INNER JOIN rowNum as Y
 ON X.rn=(Y.rn-1) 

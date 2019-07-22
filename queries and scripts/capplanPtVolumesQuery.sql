@@ -183,7 +183,7 @@ With dates AS (
 /*find the census for each provider on the dates*/
 SELECT D.FiscalPeriodLong
 , [lu_HealthCareProfessionalID] as 'DrCode'
-, [lu_WardID] as 'NursingUnitCode'
+, CASE WHEN [lu_WardID] ='R4N' AND D.[FiscalPeriodLong]  >=' 2019-08' THEN 'ACE' ELSE 'NOTACE' END as 'ACE_Flag'
 , COUNT(distinct [EncounterID]) as 'NumUniqueEncounters'
 FROM [CapPlan_RHS].[dbo].[Assignments] as X
 INNER JOIN dates as D
@@ -192,4 +192,4 @@ where X.lu_wardid not like 'm[0-9]%'	/*ignore minoru*/
 and X.lu_wardid not in ('rhbcb','ramb') /*ignore birth center and ambulatory care*/
 GROUP BY D.FiscalPeriodLong
 , [lu_HealthCareProfessionalID]
-, [lu_WardID]
+, CASE WHEN [lu_WardID] ='R4N' AND D.[FiscalPeriodLong] >=' 2019-08' THEN 'ACE' ELSE 'NOTACE' END

@@ -6,6 +6,9 @@ Date Modified:
 Comments:
 	The base idea came from Peter's query. I removed the classification as Hospitalist, GIM, etc... from this query.
 	Those linkages have to be found elsewhere in other databses like DSSI if anywhere at all.
+
+	Taking about 7 minutes to run these days.
+
  */
 
 
@@ -30,7 +33,7 @@ SELECT Y.[Date]
 END as ALCFlag
 , [lu_HealthCareProfessionalID] as 'DrCode'
 , [lu_SpecialtyID]
-, [lu_WardID] as 'NursingUnitCode'
+, CASE WHEN [lu_WardID] ='R4N' AND Y.[Date] >=' 2018-10-19' THEN 'ACE' ELSE 'NOTACE' END as 'ACE_Flag'
 , COUNT(1) as 'Census'
 FROM [CapPlan_RHS].[dbo].[Assignments] as X
 INNER JOIN dates2 as Y
@@ -43,4 +46,4 @@ GROUP BY Y.[Date]
 END
 , [lu_HealthCareProfessionalID]
 , [lu_SpecialtyID]
-, [lu_WardID]
+, CASE WHEN [lu_WardID] ='R4N' AND Y.[Date] >=' 2018-10-19' THEN 'ACE' ELSE 'NOTACE' END

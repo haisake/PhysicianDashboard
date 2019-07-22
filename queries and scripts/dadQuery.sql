@@ -31,6 +31,7 @@ Comments:
 	SELECT D.FiscalPeriodLong
 	, D.FiscalYear
 	, 'P'+ADR.MostRespProviderCode as 'MostRespProviderCode'
+	, CASE WHEN [DischNursingUnitCode] ='R4N' AND D.fiscalPeriodLong >='2019-08' THEN 'ACE' ELSE 'NOTACE' END as 'ACE_Flag'
 	, CMGPlusCode +'-' + LEFT(CMGPlusDesc,40) as 'CMG'
 	, SUM([ELOS]) as 'Sum_ELOS'
 	, SUM([LOS]) as 'Sum_LOS'
@@ -44,5 +45,6 @@ Comments:
 	GROUP BY  D.FiscalPeriodLong
 	, D.FiscalYear
 	, ADR.MostRespProviderCode
+	, CASE WHEN [DischNursingUnitCode] ='R4N' AND D.fiscalPeriodLong >='2019-08' THEN 'ACE' ELSE 'NOTACE' END
 	, CMGPlusCode +'-' + LEFT(CMGPlusDesc,40)
 

@@ -21,9 +21,10 @@ Comments:
 		, PatientID
 		, AdjustedAdmissionDate
 		, AdjustedDischargeDate
-		, D.FiscalPeriodLong as 'Discharge_FP'
-		, D.FiscalYear as 'Discharge_FY'
-		, 'P' + AD.DischargeAttendingDrcode as 'DischargeAttendingDrcode'
+		, D.FiscalPeriodLong as 'Disch_FP'
+		, D.FiscalYear as 'Disch_FY'
+		, 'P' + AD.DischargeAttendingDrcode as 'DrCode'
+		, CASE WHEN AD.DischargeNursingUnitCode ='R4N' AND D.FiscalPeriodLong >='2019-08' THEN 'ACE' ELSE 'NOTACE' END as 'ACE_Flag'
 		FROM ADTCMart.adtc.vwAdmissionDischargeFact as AD
 		INNER JOIN reportFP as D
 		ON AdjustedDischargeDate BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate
@@ -50,16 +51,18 @@ Comments:
 	)
 
 	--add on fiscal period for the readmission
-	SELECT Discharge_FP
-	, Discharge_FY
-	, DischargeAttendingDrCode as 'DischargeAttendingDrCode'
+	SELECT Disch_FP
+	, Disch_FY
+	, Drcode
+	, ACE_Flag
 	, SUM( IIF(Readmission_any_days BETWEEN 0 AND 7, 1, 0) ) as 'Seven_Day_Readmits'
 	, SUM( IIF(Readmission_any_days BETWEEN 0 AND 28, 1, 0) ) as 'TwentyEight_Day_Readmits'
 	, SUM(1) as 'TotalDischarges'
 	FROM addReadmissions as X 
-	GROUP BY Discharge_FP
-	, Discharge_FY
-	, DischargeAttendingDrCode
+	GROUP BY Disch_FP
+	, Disch_FY
+	, Drcode
+	, ACE_Flag
 
 
 

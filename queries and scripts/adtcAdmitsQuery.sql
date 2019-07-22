@@ -17,10 +17,10 @@ Comments:
 	/* pull discharges from ADTC mart */
 	SELECT D.FiscalPeriodLong as 'Admit_FP'
 	, D.FiscalYear as 'Admit_FY'
-	, [AdmissionNursingUnitCode]
 	, DATENAME(dw, AdjustedAdmissionDate) as 'Admit_DoW'
 	, DATEPART(hour, AdjustedAdmissionTime) as 'Admit_Hour'
 	, 'P' + AD.AdmissionAttendingDoctorCode as 'DrCode'
+	, CASE WHEN AD.AdmissionNursingUnitCode ='R4N' AND D.FiscalPeriodLong >='2019-08' THEN 'ACE' ELSE 'NOTACE' END as 'ACE_Flag'
 	, COUNT(1) as 'NumAdmissions'
 	FROM ADTCMart.[ADTC].[vwAdmissionDischargeFact] as AD
 	INNER JOIN reportFP as D
@@ -32,4 +32,5 @@ Comments:
 	, [AdmissionNursingUnitCode]
 	, DATENAME(dw, AdjustedAdmissionDate)
 	, DATEPART(hour, AdjustedAdmissionTime)
-	, 'P' + AD.AdmissionAttendingDoctorCode 
+	, 'P' + AD.AdmissionAttendingDoctorCode
+	, CASE WHEN AD.AdmissionNursingUnitCode ='R4N' AND D.FiscalPeriodLong >='2019-08' THEN 'ACE' ELSE 'NOTACE' END

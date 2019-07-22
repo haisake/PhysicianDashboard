@@ -34,11 +34,11 @@
 		END as 'LLOSDays'
 		, 'P' + AttendDoctorCode as 'DrCode'
 		, D.fiscalPeriodLong
-		, NursingUnitCode
+		, CASE WHEN NursingUnitCode ='R4N' AND D.FiscalPeriodLong >='2019-08' THEN 'ACE' ELSE 'NOTACE' END as 'ACE_Flag'
 		, ADTC.PatientId
 		FROM ADTCMart.[ADTC].[vwCensusFact] as ADTC
 		INNER JOIN reportFP as D 
-		ON ADTC.CensusDate  BETWEEN D.FiscalPeriodStartDate AND D.FiscalPeriodEndDate  /* pull census for the fiscal period */
+		ON ADTC.CensusDate  = D.FiscalPeriodEndDate  /* pull census for the fiscal period */
 		WHERE ADTC.age>1				/* P4P standard definition to exclude newborns. */
 		AND ADTC.AdmittoCensusDays > 30	/* only need the LLOS patients, I'm not interested in proportion of all clients */
 		AND (ADTC.HealthAuthorityName = 'Vancouver Coastal' /* only include residents of Vancouver Coastal */
@@ -49,13 +49,13 @@
 	)
 
 	SELECT 	DrCode
-	, NursingUnitCode
+	, ACE_Flag
 	, FiscalPeriodLong
 	, SUM(LLOSDays) as 'LLOSDays'
 	, COUNT(distinct PatientID) as 'NumLLOSPatients'
 	FROM LLOSData
 	GROUP BY DrCode
-	, NursingUnitCode
+	, ACE_Flag
 	, FiscalPeriodLong
 
 	

@@ -20,6 +20,7 @@ Comments:
 	, DATENAME(dw, AdjustedDischargeDate) as 'Disch_DoW'
 	, DATEPART(hour, AdjustedDischargeTime ) as 'Disch_Hour'
 	, 'P' + AD.DischargeAttendingDrcode as 'DrCode'
+	, CASE WHEN AD.DischargeNursingUnitCode ='R4N' AND D.FiscalPeriodLong >='2019-08' THEN 'ACE' ELSE 'NOTACE' END as 'ACE_Flag'
 	, COUNT(1) as 'NumDischarges'
 	FROM ADTCMart.adtc.vwAdmissionDischargeFact as AD
 	INNER JOIN reportFP as D
@@ -32,3 +33,4 @@ Comments:
 	, DATENAME(dw, AdjustedDischargeDate)
 	, DATEPART(hour, AdjustedDischargeTime )
 	, 'P' + AD.DischargeAttendingDrcode
+	, CASE WHEN AD.DischargeNursingUnitCode ='R4N' AND D.FiscalPeriodLong >='2019-08' THEN 'ACE' ELSE 'NOTACE' END
