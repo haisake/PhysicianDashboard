@@ -3,6 +3,7 @@
 # Date Created: May 15, 2019
 # Date Modified: see .git
 # Comments:
+# Use ACE open date as   2018-10-19  or 2019-09
 
 #extra code bits 
 #source("./SourceFiles/sourceHeader_v4.R", local = TRUE)
@@ -22,21 +23,9 @@ capPlanConfig <- "H:/Hans/DSN Configs/CAPPLAN.yml"
 queryFileList <- list.files()[   which( sapply(list.files(), function(x) grep(".sql",x) ) == 1 )  ] #all files with .sql in the folder
 
 #load in data
-dataList  <- loadData(queryFileList, dsdw_dsn, capPlanConfig) # Pull in datasets
+#dataList  <- loadData(queryFileList, dsdw_dsn, capPlanConfig) # Pull in datasets\
+dataList <- readFromExcel()
 dataList2 <- addFieldsAndAggregate( dataList ) #add things like service and aggregate the data when appropriate
-
-#load from excel
-# file <- "G:/VCHDecisionSupport/Patient Flow/Richmond SSRS Reports/PhysicianDashboard/PhysicianDashboard/Manaul Data/Data.xlsx"
-# 
-# dataList <- list()
-# for (ii in 1:length(queryFileList)){
-#   dataList[[ii]] <- read_excel(file, sheet = ii)
-# }
-# 
-# n <- paste0(gsub("Query.sql", "", queryFileList),"_df")
-# names(dataList) <- n
-
-#compute the indicators
 
 
 
