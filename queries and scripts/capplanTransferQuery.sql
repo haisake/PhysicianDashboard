@@ -23,8 +23,8 @@ WITH applicableEncounters AS (
 		HAVING COUNT(distinct [lu_HealthCareProfessionalID]) >=2	/* need at least 2 different providers in the encounter */
 	) as Y
 	ON X.EncounterId=Y.EncounterID	/* same encounterID */
-	WHERE AssignmentEndDate >= DATEADD(month, -1, DATEADD(year,-1,GETDATE()))		/* valid history range */
-	OR AssignmentDate >= DATEADD(month, -1, DATEADD(year,-1,GETDATE()))				/* valid history range */
+	WHERE AssignmentEndDate >= DATEADD(month, -1, DATEADD(year,-3,GETDATE()))		/* valid history range */
+	OR AssignmentDate >= DATEADD(month, -1, DATEADD(year,-3,GETDATE()))				/* valid history range */
 )
 
 /*assign an ordered row number to the eligable records based on assignment startdate */
