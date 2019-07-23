@@ -128,6 +128,17 @@ transformTransfers <- function(dataList){
   x$OrigService[index] <- paste0("ACE-", x$OrigService[index])
   x$TransService[index2] <- paste0("ACE-", x$TransService[index2])
   
+  #remove FP's without sufficiently compelte data
+  y <- x %>% group_by( transFP,TransferDate ) %>% summarize( c = n(), fpStart = min(fiscalperiodstartdate), fpEnd = max(fiscalperiodenddate) )
+  y <- y %>% ungroup()
+  y <- y %>% group_by( transFP ) %>% summarize( c =n(), fpStart = min(fpStart), fpEnd = max(fpEnd) )
+  y$p_length = as.numeric(y$fpEnd-y$fpStart+1)
+  m_l <- min(y$transFP[which(y$c/y$p_length >=0.8)])
+  m_m <- max(y$transFP[which(y$c/y$p_length >=0.8)])
+  index3 <-  y$transFP[y$transFP >= m_l & y$transFP <= m_m]
+  index4 <- which(x$transFP %in% index3)
+  x <- x[index4,]
+
   #aggregate up to service and drop columns and rename
   x <- x %>%
     group_by(transFY, transFP, TransferDoW, TransferHour, OrigService, TransService) %>%
@@ -325,8 +336,7 @@ transformDAD <- function(dataList) {
     summarize( Sum_ELOS = sum( Sum_ELOS, na.rm = TRUE)
                , Sum_LOS = sum( Sum_LOS, na.rm = TRUE)
                , NumCases = sum(NumCases, na.rm = TRUE) )
-  
-  x$ELOS_ALOS <- x$Sum_ELOS/x$Sum_LOS #add ELOS/ALOS by CMG
+
   dataList$dad_df <- x
   
   return(dataList) #return result
