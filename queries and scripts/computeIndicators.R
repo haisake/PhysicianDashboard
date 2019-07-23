@@ -1,6 +1,38 @@
 # !diagnostics off
 #to compute the indicators
 
+#Purpose: compute all indicators
+computeIndicators <- function( dataList2){
+  
+  results <- list()
+  results[[1]] <- compID1(dataList2) 
+  results[[2]] <- compID2(dataList2) 
+  results[[3]] <- compID4a(dataList2) 
+  results[[4]] <- compID4b(dataList2) 
+  results[[5]] <- compID5a(dataList2) 
+  results[[6]] <- compID5b(dataList2) 
+  results[[7]] <- compID6(dataList2) 
+  results[[8]] <- compID7(dataList2) 
+  results[[9]] <- compID8(dataList2) 
+  results[[10]] <- compID9(dataList2) 
+  results[[11]] <- compID10(dataList2) 
+  results[[12]] <- compID11a(dataList2) 
+  results[[13]] <- compID11b(dataList2) 
+  results[[14]] <- compID12a(dataList2) 
+  results[[15]] <- compID12b(dataList2) 
+  results[[16]] <- compID13(dataList2) 
+  results[[17]] <- compID14(dataList2) 
+  results[[18]] <- compID15(dataList2) 
+  results[[19]] <- compID16(dataList2) 
+  results[[20]] <- compID17(dataList2) 
+  
+  names(results) <- c("ID1","ID2","ID4a","ID4b", "ID5a","ID5b","ID6","ID7","ID8", "ID9", "ID10", "ID11a","ID11b","ID12a","ID12b","ID13", "ID14","ID15","ID16","ID17")
+  
+  return(results)
+  
+}
+
+
 #Purpose: to compute percentage of days where census <= target or funded level by service
 #Returns a single data frame with the rates
 compID1 <- function( dataList2 ){
@@ -323,9 +355,8 @@ compID8 <- function( dataList2 ){
   return(x)
 }
 
-
 #Purpose: ALOS/ELOS top 5 most significant CMGs
-compID9 <- function( dad_df ){
+compID9 <- function( dataList2 ){
   
   x <- dataList2$dad_df
   x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) ) %>%
@@ -516,6 +547,75 @@ compID13 <- function( dataList2 ){
   
   return(x)
 }
+
+#Purpose: ED consults by service
+compID13 <- function( dataList2 ){
+  
+  x <- dataList2$edConsults_df
+  
+  return(x)
+}
+
+#Purpose: LLOS Snapshot
+compID14 <- function( dataList2 ){
+  
+  x <- dataList2$adtcLLOS_df
+
+  return(x)
+}
+
+#Purpose: 15 LLOS ALC days snapshot; removed pending futher consideration
+# compID15 <- function( dataList2 ){}
+
+#Purpose: Service transfer volumes and typical or atypical
+compID16 <- function( dataList2 ){
+  
+  x <- dataList2$capplanTransfer_df #shorter variable dname
+  
+  #aggregate to number of transfers between service by FP
+  x$t_type <- paste(x$OrigService, x$TransService, sep="-")  #assign category of event
+  x <- x %>% group_by(transFP, t_type) %>% summarize( Transfers = sum(NumTransfers) )
+  x <- x %>% ungroup()
+  
+  #compute the distance between the days
+  x <- dcast(data=x,  formula = transFP ~ t_type, value.var = "Transfers", sum)
+  x <- x[order(x$transFP, decreasing = TRUE),]    #order so the most recent is row 1
+  x[is.na(x)]<-0  #replace NA with 0; it's actually a 0
+  d <- suppressWarnings(dist(x, method = "manhattan"))
+  d <- as.matrix(d)
+  s <- data.frame( dissimilarity = rowSums(d), group=1, CurrentDayValue = rowSums(d)[1] , labels=c("Current Day",rep("History",nrow(d)-1)), color=c("Blue",rep("Black",nrow(d)-1)), fp = unique(as.character(x$transFP)) )
+  msg <- max(as.character(x$transFP))
+  
+  #compute a plot summarizing similarity
+  p <- ggplot(s, aes(x=group, y=dissimilarity)) + 
+    geom_boxplot(outlier.colour="red", outlier.shape=8) + 
+    geom_dotplot(binaxis='y', stackdir='center', dotsize=0.3) +
+    geom_hline( aes(yintercept=CurrentDayValue, color=paste0("Red-Current Day-",msg) ) )+
+    labs(color = "") + xlab(" ")  + ylab("Dissimilarity") + ggtitle("Dissimilarity of Transfers Patterns") +
+    theme(legend.position="bottom",  axis.ticks.x=element_blank(),axis.text.x=element_blank())
+  
+  #typical or atypical flag
+  flag <- ( quantile(s$dissimilarity,c(0.15)) <= s$dissimilarity[1] & s$dissimilarity[1] <= quantile(s$dissimilarity,c(0.85)) )
+  
+  if(flag){
+    flag <-"Typical"
+  }else{
+    flag <-"Atypical"
+  }
+  
+  l <- list(flag,p)
+
+  return(l)
+}
+
+#Purpose: 7 and 28 day readmission rates
+compID17 <- function( dataList2 ){
+  
+  x <- dataList2$adtcReadmits_df #shorter variable name
+  return(x)
+}
+
+
 
 
 
