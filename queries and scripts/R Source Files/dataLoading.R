@@ -296,8 +296,8 @@ transformReadmits <- function(dataList){
                , TwentyEight_Day_Readmits = sum( TwentyEight_Day_Readmits, na.rm = TRUE)
                , TotalDischarges = sum(TotalDischarges, na.rm = TRUE) )
   
-  x$Seven_Day_Reamit_Rates <- x$Seven_Day_Readmits / x$TotalDischarges
-  x$TwentyEigth_Day_Reamit_Rates <- x$TwentyEight_Day_Readmits / x$TotalDischarges
+  x$Seven_Day_Readmit_Rates <- x$Seven_Day_Readmits / x$TotalDischarges
+  x$TwentyEigth_Day_Readmit_Rates <- x$TwentyEight_Day_Readmits / x$TotalDischarges
   
   #need a column to join on so we have to make a unique dummy column for DPLYR
   placeholder$key <-apply( placeholder , 1 , paste , collapse = "ZZ" )
@@ -400,7 +400,7 @@ transformLLOS <- function(dataList){
  
   #aggregate to service
   x <- x %>% group_by(FiscalPeriodLong, DoctorService) %>%
-    summarize( NumLLOS = sum(NumLLOSPatients), LOSDays_Tot = sum(LLOSDays) )
+    summarize( NumLLOSPatients = sum(NumLLOSPatients), LLOSDays_Tot = sum(LLOSDays) )
   
   #
   dataList$adtcLLOS_df <- x #put the result into the data list

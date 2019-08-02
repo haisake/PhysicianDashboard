@@ -21,6 +21,8 @@ intialize() #intialize local variables and libraries
 dsdw_dsn <- "AISAKE-DSSI"
 capPlanConfig <- "H:/Hans/DSN Configs/CAPPLAN.yml"
 queryFileList <- list.files()[   which( sapply(list.files(), function(x) grep(".sql",x) ) == 1 )  ] #all files with .sql in the folder
+ID1_censusLimits <<- rbind(c("ACE-Hospitalist", 18),  c("ACE-InternalMedicine", 18), c("ACE-Other", 0), c("Hospitalist", 90), c("InternalMedicine",31)) #from Clair
+
 
 #load in data
 #dataList  <- loadData(queryFileList, dsdw_dsn, capPlanConfig) # Pull in datasets\
