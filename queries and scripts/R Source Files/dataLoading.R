@@ -176,8 +176,8 @@ transformCensus <- function(dataList){
   x <- x %>% 
     left_join( dataList$doctorServices_df, by="DrCode", suffix=c("",".y") )  %>%
     inner_join( dataList$reportDate_df, by = c("Date" = "ShortDate"), suffix=c("",".z") ) %>% 
-    select( names(x), "DoctorService","fiscalperiodlong")
-  x<- x %>% rename( censusFP = fiscalperiodlong) 
+    select( names(x), "DoctorService","fiscalperiodlong","fiscalperiodenddate" )
+  x<- x %>% rename( censusFP = fiscalperiodlong, fpEnd = fiscalperiodenddate) 
 
   #note who has ace service
   index <- which(x$ACE_Flag =="ACE") #ace patients
@@ -186,14 +186,14 @@ transformCensus <- function(dataList){
   
   #aggregate to service
   x <- x %>%
-    group_by(Date, censusFP, CensusHour, ALCFlag, DoctorService) %>%
+    group_by(Date, censusFP, fpEnd, CensusHour, ALCFlag, DoctorService) %>%
     summarize( Census = sum( Census, na.rm = TRUE) )
   x$key <- paste(x$Date, x$censusFP, x$CensusHour, x$ALCFlag, x$DoctorService, sep="-")
   x <- x %>% ungroup()
   
   #create an all combos data set to facilitate identification of 0 census
   #list of dimensions for the combos
-  p = data.frame( unique(  x[, c("Date", "censusFP", "CensusHour")]), foo=1)
+  p = data.frame( unique(  x[, c("Date", "censusFP","fpEnd", "CensusHour")]), foo=1)
   q = data.frame( ALCFlag = unique(x$ALCFlag), foo=1)
   r = data.frame( DoctorService = unique( x$DoctorService ), foo=1)
   placeholder <- p %>% left_join(q, by="foo") %>% left_join(r, by="foo") %>% select(-foo)
@@ -307,13 +307,13 @@ transformReadmits <- function(dataList){
   placeholder <- placeholder %>%  
     left_join( x, by="key", suffix=c("",".y")) %>% 
     select(names(placeholder),"Seven_Day_Readmits","TwentyEight_Day_Readmits", "TotalDischarges"
-           , "Seven_Day_Reamit_Rates","TwentyEigth_Day_Reamit_Rates", -"key")
+           , "Seven_Day_Readmit_Rates","TwentyEigth_Day_Readmit_Rates", -"key")
   
   placeholder$Seven_Day_Readmits[is.na(placeholder$Seven_Day_Readmits)]             <- 0  #set 0s
   placeholder$TwentyEight_Day_Readmits[is.na(placeholder$TwentyEight_Day_Readmits)] <- 0  #set 0s
   placeholder$TotalDischarges[is.na(placeholder$TotalDischarges)]              <- 0  #set 0s
-  placeholder$Seven_Day_Reamit_Rates[is.na(placeholder$TotalDischarges)]       <- 0  #set 0s
-  placeholder$TwentyEigth_Day_Reamit_Rates[is.na(placeholder$TotalDischarges)] <- 0  #set 0s
+  placeholder$Seven_Day_Redamit_Rates[is.na(placeholder$TotalDischarges)]       <- 0  #set 0s
+  placeholder$TwentyEigth_Day_Readmit_Rates[is.na(placeholder$TotalDischarges)] <- 0  #set 0s
   
   dataList$adtcReadmits_df <- placeholder #put the result into the data list
   return(dataList)

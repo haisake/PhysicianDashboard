@@ -41,16 +41,22 @@ compID1 <- function( dataList2 ){
   
   #troubleshooting
   x <- dataList2$capplanCensus_df
-  
+
   #targets for indicators
   #specified targets
-  targets <- data.frame( DoctorService = c("ACE-Hospitalist", "ACE-InternalMedicine", "ACE-Other", "Hospitalist", "InternalMedicine", "Other"), targets = c(NA,NA,NA,NA,36,NA))
-  
+  targets <- ID1_censusLimits #official
+  #targets <- ID1_censusLimits_test #testing
+ 
   #identify days over target
-  x <- x %>% left_join( targets, by = "DoctorService" ) #combine targets to DF
-  index <- which(x$Census >= x$targets) #which records are over target
+  x <- x %>% inner_join( targets, by = "DoctorService")  #combine targets to DF
+  index <- which(x$Census >= x$Targets) #which records are over target
   x$overTargetFlag <- 0  #0 if under or equal to
   x$overTargetFlag[index] <-1  #if over
+  
+  #count number of days over and under and compute the rate
+  y <- x %>%
+    group_by(Date, DoctorService) %>%
+    summarize( totCensus = sum(Census) )
   
   #count number of days over and under and compute the rate
   result_df <- x %>%
@@ -58,9 +64,30 @@ compID1 <- function( dataList2 ){
               summarize( daysOver = sum(overTargetFlag), totalDays = n() )
   result_df$rate <- 1.0*result_df$daysOver/result_df$totalDays #compute the rate
   
-  p <- ggplot( result_df, aes())
+  #plot like the ED P4P
+  p <- ggplot( result_df, aes(x=censusFP, y=rate, group=1)) +
+    facet_wrap( ~ DoctorService, ncol=2) +
+    geom_line(aes(colour=DoctorService)) +
+    xlab("FiscalPeriod")  + 
+    ylab("Rate%") + 
+    ggtitle("Days Census <= Target Level") +
+    theme(axis.text.x = element_text(angle = 90, vjust=0.5)) +
+    scale_y_continuous(labels = scales::percent, limits = c(0,0.5))
   
-  return(result_df) #return the result
+  #box plot
+  p2<- ggplot(y, aes( y=totCensus, fill=DoctorService)) +
+    geom_boxplot(outlier.colour="red", outlier.shape=16, outlier.size=2, notch=FALSE) +
+    ggtitle("Days Census <= Target Level") +
+    theme(axis.text.x = element_blank())
+  
+  #cumulative denisty plot
+  p3 <- ggplot(y, aes(totCensus, colour=DoctorService)) + stat_ecdf(geom = "step")
+   
+  
+  l <-list(result_df,p,p2,p3)
+  names(l) <- c("Data","Plot","Boxpolt","CumulativePlot")
+  
+  return(l) #return the result
 }
 
 #Purpose: to compute distribution of census by services is typical or atypical
@@ -95,7 +122,8 @@ compID2 <- function( dataList2 ){
     geom_hline( aes(yintercept=CurrentDayValue, color=paste0("Red-Current Day-",msg) ) )+
     labs(color = "") + xlab(" ")  + ylab("Dissimilarity") + ggtitle("Dissimilarity of Census by Service") +
     theme(legend.position="bottom",  axis.ticks.x=element_blank(),axis.text.x=element_blank())
-
+  
+ 
   #typical or atypical flag
   flag <- ( quantile(s$dissimilarity,c(0.15)) <= s$dissimilarity[1] & s$dissimilarity[1] <= quantile(s$dissimilarity,c(0.85)) )
   
@@ -127,8 +155,20 @@ compID4a <- function( dataList2 ){
   totalCensus_df <- totalCensus_df %>% ungroup()
   x <- x %>% left_join(totalCensus_df, by="censusFP")
   x$distCensus <- x$drCensus/x$totalCensus
+  
+  #create a plot
+  #q <- x %>% select("censusFP", "DoctorService", "drCensus")
+  p <- ggplot(data=x, aes(x=censusFP, y=drCensus, fill=DoctorService)) + 
+    geom_bar(stat="identity") +
+    xlab("FiscalPeriod")  + 
+    ylab("Total Inpatient Days") + 
+    ggtitle("RHS - Inpatient Days by Service - Hosp & IM") +
+    theme(axis.text.x = element_text(angle = 90, vjust=0.5))
 
-  return(x)
+  l <- list(x, p) #list with return values
+  names(l) <- c("data","plot")
+  
+  return(l)
 }
 
 #Purpose: to compute distribution # of inpatient days by service typical or atypical
@@ -159,8 +199,16 @@ compID4b <- function( dataList2 ){
   p <- ggplot(s) + 
     geom_dotplot( aes(x=dissimilarity, fill=color) ) +      
     scale_fill_discrete(name = "Legend", labels = c("History", "CurrentValue")) +
-    ggtitle("Placeholder - Inpatient Days dist") + xlab("Dissimilarity Score") + ylab("Number of Elements in Bucket") +
-    theme(axis.title.y = element_blank() , axis.ticks.y = element_blank(), axis.text.y = element_blank()) 
+    ggtitle("Placeholder - Inpatient Days dist") + 
+    xlab("Dissimilarity Score (low = similar, high= different)") +
+    ylab("Number of Elements in Bucket") +
+    theme(axis.title.y = element_blank() , axis.ticks.y = element_blank(), axis.text.y = element_blank()) +
+    scale_y_continuous(limits = c(0,0.25))
+    
+    annotate(""
+             
+              +
+               
   
   #ggplot(s)+
   #  geom_histogram(aes(x=dissimilarity, fill=labels)) +
@@ -188,17 +236,18 @@ compID5a <- function( dataList2 ){
   
   #compute the ALC days by service per fiscal period
   x <- x %>% filter( !DoctorService %in% c("Other","ACE-Other")  ) #remove other services
-  x <- x %>% filter( ALCFlag =="ALC" )
-  x <- x %>% group_by(censusFP, DoctorService) %>% summarize( alcDays = sum(Census) )
+  x <- x %>% filter( ALCFlag =="ALC" &  Date == fpEnd)
+  #x <- x %>% group_by(censusFP, DoctorService) %>% summarize( alcDays = sum(Census) )
 
   #clean up the data object structures
   x <- x %>% ungroup() #remove groups
   x <- droplevels(x)   #update levels
 
   #ggplot
-  p <- ggplot(x, aes(x=censusFP, y=alcDays, group=DoctorService, color=DoctorService)) +
+  p <- ggplot(x, aes(x=censusFP, y=Census, group=DoctorService, color=DoctorService)) +
     geom_line() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggtitle("RHS - ALC Days FP End Snapshot by Service")
   
   l <- list(x,p)
   return(l)
@@ -231,7 +280,9 @@ compID5b <- function( dataList2 ){
   #ggplot
   p <- ggplot(y, aes(x=censusFP, y=alcRate, group=DoctorService, color=DoctorService)) +
     geom_line() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggtitle("ALC Rate by Service")  +
+    scale_y_continuous(labels = scales::percent, limits = c(0,0.5))
   
   l <- list(y,p)
   return(l)
@@ -266,6 +317,8 @@ compID6 <- function( dataList2 ){
     xlab("Fiscal Period")  + ylab("ALOS* (days)") + 
     ggtitle("Inpatient days per patient by Service") +
     theme(legend.position="bottom", axis.text.x = element_text(angle = 90, hjust = 1)) 
+  
+  #IP days per case box plot
   
   l <- list(y,p) #the internal medicine ace numbers aren't stable enough
   return(l)
@@ -357,6 +410,7 @@ compID6 <- function( dataList2 ){
 #Purpose: ALOS/ELOS
 compID8 <- function( dataList2 ){
   
+  #data
   x <- dataList2$dad_df
   x <- x %>% filter( DoctorService %in% c("ACE-Hospitalist","Hospitalist","ACE-InternalMedicine","InternalMedicine" ) ) %>%
     group_by(FiscalPeriodLong, DoctorService) %>%
@@ -364,7 +418,21 @@ compID8 <- function( dataList2 ){
   x <- x %>% ungroup()
   x$LOS_ELOS <- x$LOS/x$ELOS
   
-  return(x)
+  #plot by service
+  p <- ggplot(x, aes(x=FiscalPeriodLong, y=LOS_ELOS, group=DoctorService, colour=DoctorService) ) + 
+    geom_line( ) + 
+    geom_hline( yintercept=1, color="Black") +
+    ggtitle("ALOS/ELOS for RHS") +
+    theme(legend.position="bottom", axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ylab("ALOS/ELOS")  + xlab("Discharge Fiscal Period")
+  
+  #return list
+  l <- list(x,p)
+  names(l) <-c("Data","Plot")
+ 
+   # scale_y_continuous(labels = scales::percent, limits = c(0,0.5))
+  
+  return(l)
 }
 
 #Purpose: ALOS/ELOS top 5 most significant CMGs
@@ -421,7 +489,7 @@ compID9 <- function( dataList2 ){
              size=3, hjust=0) +
     annotate("text", 15, 3.5, label="99.9% limit", colour="red", 
              size=3, hjust=0) +
-    labs(x="No. Discharges", y="ALOS/ELOS") +    
+    labs(x="No. Discharges", y="ALOS/ELOS", title="RHS Funnel Plot ALOS/ELOS") +    
     theme_bw()
   
   #results
