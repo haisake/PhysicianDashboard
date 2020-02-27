@@ -1,0 +1,8 @@
+default:
+  capplan:
+    driver: 'SQL Server' 
+    server: 'SPDBSCAP001'
+    uid: 'CapPlanHC_Reader'
+    pwd: 'ewq@#$%31231FHJFV~!gfh'  
+    database: 'CapPlan_rhs'
+

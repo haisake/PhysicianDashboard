@@ -19,7 +19,7 @@ intialize() #intialize local variables and libraries
 
 #set parameters
 dsdw_dsn <- "AISAKE-DSSI"
-capPlanConfig <- "H:/Hans/DSN Configs/CAPPLAN.yml"
+capPlanConfig <- "G:/VCHDecisionSupport/Patient Flow/Richmond SSRS Reports/PhysicianDashboard/PhysicianDashboard/CAPPLAN.yml"
 queryFileList <- list.files()[   which( sapply(list.files(), function(x) grep(".sql",x) ) == 1 )  ] #all files with .sql in the folder
 
 ID1_censusLimits <<- data.frame(DoctorService = c("ACE-Hospitalist","ACE-InternalMedicine", "ACE-Other", "Hospitalist","InternalMedicine", "Other"), Targets = c(18,18,0,90,31,0)) #from Clair
